@@ -11,32 +11,44 @@ session_manager = GeminiSessionManager()
 @router.websocket("/ws/interview")
 async def interview_ws(websocket: WebSocket):
     await websocket.accept()
-    gemini_session = None
     try:
-        while True:
-            message = await websocket.receive()
-            if "text" in message:
-                data = json.loads(message["text"])
-                if data["type"] == "start":
-                    system_prompt = "You are a senior technical interviewer. Ask exactly 5 main questions."
-                    # We await the context manager and then use it.
-                    # Note: The provided code doesn't use 'async with'.
-                    # We will try to follow the user's code closely.
-                    gemini_session = await session_manager.connect(system_prompt)
-                    asyncio.create_task(relay_gemini_to_browser(gemini_session, websocket))
-            elif "bytes" in message:
-                if gemini_session:
-                    # If gemini_session is a context manager, this might fail.
-                    # But we follow instructions.
-                    await gemini_session.send_realtime_input(
-                        audio=types.Blob(data=message["bytes"], mime_type="audio/pcm;rate=16000")
-                    )
+        # Wait for the first message (should be a "start" message)
+        message = await websocket.receive()
+        if "text" in message:
+            data = json.loads(message["text"])
+            if data["type"] == "start":
+                system_prompt = "You are a senior technical interviewer. Ask exactly 5 main questions."
+                # Correctly enter the async context manager
+                async with await session_manager.connect(system_prompt) as session:
+                    # Start the relay task
+                    relay_task = asyncio.create_task(relay_gemini_to_browser(session, websocket))
+                    
+                    # Continue the WebSocket loop for binary audio and additional messages
+                    while True:
+                        try:
+                            message = await websocket.receive()
+                        except WebSocketDisconnect:
+                            break
+
+                        if "bytes" in message:
+                            await session.send_realtime_input(
+                                audio=types.Blob(data=message["bytes"], mime_type="audio/pcm;rate=16000")
+                            )
+                        elif "text" in message:
+                            data = json.loads(message["text"])
+                            if data["type"] == "end":
+                                break
+                    
+                    # Cancel the relay task when the loop ends
+                    relay_task.cancel()
+                    try:
+                        await relay_task
+                    except asyncio.CancelledError:
+                        pass
     except WebSocketDisconnect:
         pass
-    finally:
-        if gemini_session:
-            # Close the session if needed
-            pass
+    except Exception as e:
+        print(f"WebSocket error: {e}")
 
 async def relay_gemini_to_browser(session, websocket):
     # session should be the LiveSession object.
