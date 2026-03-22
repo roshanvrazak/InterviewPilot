@@ -1,0 +1,38 @@
+// frontend/src/hooks/useAudioCapture.ts
+import { useRef, useCallback } from 'react';
+
+export function useAudioCapture(onAudioChunk: (data: ArrayBuffer) => void) {
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const workletNodeRef = useRef<AudioWorkletNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const start = useCallback(async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { sampleRate: 48000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
+    });
+    streamRef.current = stream;
+
+    const audioContext = new AudioContext({ sampleRate: 48000 });
+    audioContextRef.current = audioContext;
+
+    await audioContext.audioWorklet.addModule('/pcm-processor.js');
+
+    const source = audioContext.createMediaStreamSource(stream);
+    const workletNode = new AudioWorkletNode(audioContext, 'pcm-processor');
+    workletNodeRef.current = workletNode;
+
+    workletNode.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
+      onAudioChunk(event.data);
+    };
+
+    source.connect(workletNode);
+  }, [onAudioChunk]);
+
+  const stop = useCallback(() => {
+    workletNodeRef.current?.disconnect();
+    audioContextRef.current?.close();
+    streamRef.current?.getTracks().forEach(track => track.stop());
+  }, []);
+
+  return { start, stop };
+}
