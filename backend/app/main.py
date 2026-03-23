@@ -14,16 +14,31 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Start background cleanup task
     logger.info("Application starting up...")
+    # Start background cleanup task
     cleanup_task = asyncio.create_task(periodic_cleanup())
+    
     yield
-    # Clean up the cleanup task
+    
+    logger.info("Application shutting down...")
+    # Clean up the session cleanup task
     cleanup_task.cancel()
     try:
         await cleanup_task
     except asyncio.CancelledError:
         pass
+    
+    # Close the database pool
+    try:
+        await db_manager.disconnect()
+        logger.info("Database pool closed.")
+    except Exception as e:
+        logger.error(f"Error closing database pool: {e}")
+    
+    # (Optionally) Close all active Gemini sessions in the session_store
+    # For now, just ensure the store is cleared or logged
+    logger.info(f"Clearing session store. Active sessions: {len(session_store.sessions)}")
+    session_store.sessions.clear()
 
 async def periodic_cleanup():
     while True:
