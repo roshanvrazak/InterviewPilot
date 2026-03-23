@@ -1,0 +1,9 @@
+node_modules
+dist
+.git
+.dockerignore
+package-lock.json
+npm-debug.log
+.env
+.env.local
+.vscode

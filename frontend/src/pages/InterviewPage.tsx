@@ -16,6 +16,7 @@ interface InterviewPageProps {
 export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty, jobDescription, onScorecard }) => {
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'ending'>('idle');
+  const [isMuted, setIsMuted] = useState(false);
   const [isInterrupted, setIsInterrupted] = useState(false);
   const { init: initPlayback, playChunk, stop: stopPlayback, stopAll, analyser: playbackAnalyser } = useAudioPlayback();
   const { start: startRecording, stop: stopRecording, audioBlob } = useMediaRecorder();
@@ -34,11 +35,22 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
 
   const onJson = useCallback((msg: any) => {
     if (msg.type === 'transcript') {
-      setStatus('active'); // First transcript means we are active
-      setTranscripts(prev => [...prev, msg]);
+      setStatus('active');
+      setTranscripts(prev => {
+        if (prev.length > 0 && prev[prev.length - 1].speaker === msg.speaker) {
+          const last = prev[prev.length - 1];
+          const newText = last.text.endsWith(' ') || msg.text.startsWith(' ') 
+            ? last.text + msg.text 
+            : last.text + " " + msg.text; 
+          return [...prev.slice(0, -1), { ...last, text: newText }];
+        }
+        return [...prev, msg];
+      });
     } else if (msg.type === 'history') {
       setTranscripts(msg.history);
-      setStatus('active'); // Restore status as well
+      setStatus('active');
+    } else if (msg.type === 'session_id') {
+      setStatus('active');
     } else if (msg.type === 'scorecard') {
       scorecardRef.current = msg.data;
     }
@@ -51,15 +63,39 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
     }
   }, [audioBlob, segments, onScorecard, hasReportedScorecard]);
 
-  const { connect, send, connected } = useWebSocket(onAudio, onJson);
+  const { connect, send, connected, disconnect } = useWebSocket(onAudio, onJson);
   const { start: startCapture, stop: stopCapture, analyser: captureAnalyser, stream } = useAudioCapture((audioData) => {
-    send(audioData);
+    // Only send audio if we are not muted
+    if (!isMuted) {
+      send(audioData);
+    }
   });
 
-  const handleStart = () => {
-    setStatus('connecting');
-    initPlayback();
-    connect('ws://localhost:8000/ws/interview');
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  const handleFinishAnswer = () => {
+    // Stop any ongoing playback
+    stopAll();
+    // Send a client_content message with end_of_turn to force the AI to process and respond
+    // In our backend, "interrupted" currently acts as a signal for the user taking control,
+    // but to explicitly yield control back to the AI without a specific payload,
+    // we can send a custom "client_turn_complete" message
+    send({ type: 'client_turn_complete' });
+  };
+
+  const handleStart = async () => {
+    try {
+      setStatus('connecting');
+      await initPlayback();
+      await startCapture();
+      connect('ws://localhost:8000/ws/interview');
+    } catch (error) {
+      console.error("Failed to start interview:", error);
+      setStatus('idle');
+      alert("Could not access microphone. Please check permissions.");
+    }
   };
 
   const handleEnd = () => {
@@ -71,7 +107,13 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
         setSegments(prev => [...prev, { ...currentSegmentRef.current!, end: endTime }]);
         currentSegmentRef.current = null;
       }
-      send({ type: 'end' });
+      
+      if (connected) {
+        send({ type: 'end' });
+      } else {
+        setStatus('idle');
+        disconnect();
+      }
     }
   };
 
@@ -80,67 +122,24 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
     if (connected && stream && status === 'connecting') {
       interviewStartTimeRef.current = performance.now();
       startRecording(stream);
-    }
-  }, [connected, stream, status, startRecording]);
-
-  // Interruption and segment detection logic
-  useEffect(() => {
-    if (!connected || !captureAnalyser || !playbackAnalyser || status !== 'active') return;
-
-    let animationFrameId: number;
-    const captureData = new Uint8Array(captureAnalyser.frequencyBinCount);
-    const playbackData = new Uint8Array(playbackAnalyser.frequencyBinCount);
-
-    const checkAudioLevels = () => {
-      animationFrameId = requestAnimationFrame(checkAudioLevels);
       
-      captureAnalyser.getByteFrequencyData(captureData);
-      playbackAnalyser.getByteFrequencyData(playbackData);
-
-      const captureLevel = captureData.reduce((a, b) => a + b, 0) / captureData.length;
-      const playbackLevel = playbackData.reduce((a, b) => a + b, 0) / playbackData.length;
-
-      const now = performance.now() - interviewStartTimeRef.current;
-
-      // Segment tracking: Candidate starts speaking
-      if (captureLevel > 15 && playbackLevel < 5 && !currentSegmentRef.current) {
-        currentSegmentRef.current = { start: now };
-      }
-
-      // Segment tracking: Candidate stops speaking (AI starts)
-      if (playbackLevel > 10 && currentSegmentRef.current) {
-        setSegments(prev => [...prev, { ...currentSegmentRef.current!, end: now }]);
-        currentSegmentRef.current = null;
-      }
-
-      // Interruption logic
-      if (captureLevel > 15 && playbackLevel > 5 && Date.now() - lastInterruptionRef.current > 1000) {
-        lastInterruptionRef.current = Date.now();
-        stopAll();
-        send({ type: 'interrupted' });
-        setIsInterrupted(true);
-        setTimeout(() => setIsInterrupted(false), 1000);
-      }
-    };
-
-    checkAudioLevels();
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [connected, captureAnalyser, playbackAnalyser, status, stopAll, send]);
-
-  useEffect(() => {
-    if (connected) {
       send({ 
         type: 'start', 
         role_id: roleId, 
         difficulty: difficulty,
         job_description: jobDescription
       });
-      startCapture();
-    } else {
+    }
+  }, [connected, stream, status, startRecording, send, roleId, difficulty, jobDescription]);
+
+  // Handle cleanup on unmount
+  useEffect(() => {
+    return () => {
       stopCapture();
       stopPlayback();
-    }
-  }, [connected, send, startCapture, stopCapture, stopPlayback, roleId, difficulty, jobDescription]);
+      disconnect();
+    };
+  }, [stopCapture, stopPlayback, disconnect]);
 
   const getAIState = (): VisualizerState => {
     if (status === 'connecting') return 'Connecting';
@@ -151,7 +150,7 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
 
   const getUserState = (): VisualizerState => {
     if (status === 'connecting') return 'Connecting';
-    if (status === 'active') return 'Listening';
+    if (status === 'active') return isMuted ? 'Idle' : 'Listening';
     return 'Idle';
   };
 
@@ -179,23 +178,47 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
             Start Interview
           </button>
         ) : (
-          <div className="flex items-center justify-between mb-8 w-full max-w-2xl">
-            <div className="flex items-center space-x-2">
-              <div className={`w-3 h-3 rounded-full ${status === 'active' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-              <span className="text-sm font-medium text-gray-600 uppercase tracking-wider">{status}</span>
+          <div className="flex flex-col items-center w-full max-w-2xl gap-4">
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${status === 'active' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                <span className="text-sm font-medium text-gray-600 uppercase tracking-wider">{status}</span>
+              </div>
+              <button 
+                onClick={handleEnd} 
+                disabled={status === 'ending'}
+                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-bold transition-colors disabled:opacity-50"
+              >
+                {status === 'ending' ? 'Generating Scorecard...' : 'End Interview'}
+              </button>
             </div>
-            <button 
-              onClick={handleEnd} 
-              disabled={status === 'ending'}
-              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-bold transition-colors disabled:opacity-50"
-            >
-              {status === 'ending' ? 'Generating Scorecard...' : 'End Interview'}
-            </button>
+            
+            {status === 'active' && (
+              <div className="flex justify-center gap-4 w-full mt-4">
+                <button
+                  onClick={toggleMute}
+                  className={`px-6 py-3 rounded-full font-bold transition-colors flex-1 ${
+                    isMuted 
+                      ? 'bg-red-100 text-red-600 border-2 border-red-500' 
+                      : 'bg-green-100 text-green-600 border-2 border-green-500'
+                  }`}
+                >
+                  {isMuted ? 'Mic Muted (Click to Unmute)' : 'Mic Active (Click to Mute)'}
+                </button>
+                <button
+                  onClick={handleFinishAnswer}
+                  disabled={isMuted}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-bold transition-colors disabled:opacity-50 flex-1 shadow-md"
+                >
+                  Finish Answer (Send to AI)
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      <div className="bg-white border border-gray-200 p-6 rounded-xl h-[450px] overflow-y-auto shadow-inner">
+      <div className="bg-white border border-gray-200 p-6 rounded-xl h-[400px] overflow-y-auto shadow-inner">
         {transcripts.length === 0 && (
           <div className="text-center text-gray-400 mt-20 italic">
             Interview transcript will appear here...

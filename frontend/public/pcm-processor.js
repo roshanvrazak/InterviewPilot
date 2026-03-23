@@ -5,6 +5,11 @@ class PCMProcessor extends AudioWorkletProcessor {
     this.inputSampleRate = 48000;
     this.outputSampleRate = 16000;
     this.ratio = this.inputSampleRate / this.outputSampleRate;
+    
+    // Buffer for ~100ms of audio at 16kHz
+    this.bufferSize = 2048;
+    this.buffer = new Int16Array(this.bufferSize);
+    this.bufferOffset = 0;
   }
 
   process(inputs) {
@@ -13,18 +18,21 @@ class PCMProcessor extends AudioWorkletProcessor {
 
     const channelData = input[0];
     const downsampledLength = Math.floor(channelData.length / this.ratio);
-    const downsampled = new Float32Array(downsampledLength);
+    
     for (let i = 0; i < downsampledLength; i++) {
-      downsampled[i] = channelData[Math.round(i * this.ratio)];
+      const sample = channelData[Math.round(i * this.ratio)];
+      const s = Math.max(-1, Math.min(1, sample));
+      this.buffer[this.bufferOffset] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      this.bufferOffset++;
+
+      if (this.bufferOffset >= this.bufferSize) {
+        // Send a copy of the buffer
+        const outBuffer = new Int16Array(this.buffer);
+        this.port.postMessage(outBuffer.buffer, [outBuffer.buffer]);
+        this.bufferOffset = 0;
+      }
     }
 
-    const pcm16 = new Int16Array(downsampled.length);
-    for (let i = 0; i < downsampled.length; i++) {
-      const s = Math.max(-1, Math.min(1, downsampled[i]));
-      pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-    }
-
-    this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
     return true;
   }
 }

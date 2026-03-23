@@ -9,6 +9,7 @@ from google.genai import types
 from app.services.gemini_session import GeminiSessionManager
 from app.services.evaluator import EvaluatorService
 from app.services.session_store import session_store
+from app.config import settings
 from app.utils.prompts import INTERVIEWER_SYSTEM_PROMPT, ROLE_CONFIGS, DIFFICULTY_CONFIGS
 from app.db import queries
 
@@ -20,7 +21,11 @@ logger = logging.getLogger(__name__)
 @router.websocket("/ws/interview")
 async def interview_ws(websocket: WebSocket):
     await websocket.accept()
-    logger.info("WebSocket connection established")
+    
+    # DEBUG: Verify key at the start of every connection
+    key = settings.GOOGLE_API_KEY
+    masked_key = f"{key[:6]}...{key[-4:]}" if key else "MISSING"
+    logger.info(f"WebSocket connection established. Using API Key: {masked_key}")
     session_id = None
     session_data = None
     
@@ -57,7 +62,6 @@ async def interview_ws(websocket: WebSocket):
                 role_config = ROLE_CONFIGS.get(role_id, ROLE_CONFIGS["software_engineer"])
                 diff_config = DIFFICULTY_CONFIGS.get(difficulty, DIFFICULTY_CONFIGS["Medium"])
                 
-                # Combine role and difficulty configurations
                 combined_config = {**role_config, **diff_config}
                 system_prompt = INTERVIEWER_SYSTEM_PROMPT.format(**combined_config)
 
@@ -76,16 +80,24 @@ async def interview_ws(websocket: WebSocket):
                     logger.error(f"DB Error creating session: {e}")
 
                 # Connect to Gemini
-                genai_session = await session_manager.connect(system_prompt)
-                live_session = await genai_session.__aenter__()
+                try:
+                    logger.info(f"Attempting to connect to Gemini model: {session_manager.model}")
+                    genai_session = await session_manager.connect(system_prompt)
+                    # We enter the context here but the relay task will manage it
+                    live_session = await genai_session.__aenter__()
+                    logger.info("Successfully connected to Gemini Live session")
+                except Exception as genai_err:
+                    logger.error(f"Gemini Connection Error: {genai_err}", exc_info=True)
+                    await websocket.send_json({"type": "error", "message": str(genai_err)})
+                    await websocket.close(code=1011)
+                    return
                 
-                transcript_history = []
                 session_data = {
                     "session_id": session_id,
                     "db_session_id": db_session_id,
                     "live_session": live_session,
                     "genai_session": genai_session,
-                    "transcript_history": transcript_history,
+                    "transcript_history": [],
                     "job_description": job_description,
                     "websocket": websocket,
                     "relay_task": None,
@@ -95,57 +107,53 @@ async def interview_ws(websocket: WebSocket):
                 session_store.save(session_id, session_data)
                 await websocket.send_json({"type": "session_id", "session_id": session_id})
                 
-                # Start relay task
+                # Start relay task - this task now OWNS the session lifecycle
                 relay_task = asyncio.create_task(relay_gemini_to_browser(session_id))
                 session_data["relay_task"] = relay_task
+
+                # Force the AI to start speaking immediately
+                logger.info("Sending initial prompt to trigger AI greeting...")
+                await live_session.send(input="Hello, I am ready for my interview.")
 
             if not session_data:
                 logger.warning("Session data missing, closing connection")
                 await websocket.close(code=1000)
                 return
 
-            # Main WebSocket loop
-            live_session = session_data["live_session"]
+            # Main WebSocket loop - just relays input
             while True:
                 try:
                     message = await websocket.receive()
                 except WebSocketDisconnect:
                     logger.info(f"WebSocket disconnected for session: {session_id}")
+                    # Update session data to reflect missing websocket
+                    if session_data:
+                        session_data["websocket"] = None
                     break
 
                 if "bytes" in message:
-                    await live_session.send_realtime_input(
-                        audio=types.Blob(data=message["bytes"], mime_type="audio/pcm;rate=16000")
-                    )
+                    try:
+                        await session_data["live_session"].send_realtime_input(
+                            audio=types.Blob(data=message["bytes"], mime_type="audio/pcm;rate=16000")
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to send realtime input (session may be closed): {e}")
+                        break # Break the websocket loop if we can't send to Gemini
                 elif "text" in message:
                     data = json.loads(message["text"])
                     if data["type"] == "end":
                         logger.info(f"Session ended by user: {session_id}")
-                        # Mark as completed
                         session_data["completed"] = True
-                        
-                        # Generate scorecard
-                        full_transcript = "\n".join([f"{t['speaker']}: {t['text']}" for t in session_data["transcript_history"]])
-                        if full_transcript:
-                            scorecard = await evaluator.generate_scorecard(full_transcript, session_data.get("job_description"))
-                            
-                            # Save scorecard to DB
-                            if session_data.get("db_session_id"):
-                                try:
-                                    overall_score = scorecard.get("overall_score", 0)
-                                    await queries.save_scorecard(session_data["db_session_id"], overall_score, scorecard)
-                                except Exception as e:
-                                    logger.error(f"DB Error saving scorecard: {e}")
-                            
-                            try:
-                                await websocket.send_json({"type": "scorecard", "data": scorecard})
-                            except: pass
-                        
-                        session_store.delete(session_id)
                         break
                     elif data["type"] == "interrupted":
-                        # Handle interruption if needed by the session manager
+                        logger.info(f"Frontend sent 'interrupted' signal for session: {session_id}")
                         pass
+                    elif data["type"] == "client_turn_complete":
+                        logger.info(f"Frontend sent 'client_turn_complete' for session: {session_id}")
+                        try:
+                            await session_data["live_session"].send(input={"parts": []}, end_of_turn=True)
+                        except Exception as e:
+                            logger.error(f"Failed to send end_of_turn to Gemini: {e}")
     
     except WebSocketDisconnect:
         # Don't delete the session on disconnect to allow reconnection
@@ -168,77 +176,82 @@ async def relay_gemini_to_browser(session_id: str):
     db_session_id = session_data.get("db_session_id")
     start_time = session_data["start_time"]
     
+    logger.info(f"Relay task started for session: {session_id}")
+    
     try:
-        async for response in live_session.receive():
-            # Refresh session_data to get the latest websocket (might have reconnected)
-            session_data = session_store.get(session_id)
-            if not session_data:
-                # Session was deleted (likely an "end" message)
-                break
-            
-            websocket = session_data["websocket"]
-            sc = response.server_content
-            
-            if sc and sc.model_turn:
-                for part in sc.model_turn.parts:
-                    if part.inline_data:
+        while True:
+            async for response in live_session.receive():
+                # IMPORTANT: Do not break the loop if websocket is temporarily missing
+                # during a reconnection event.
+                session_data = session_store.get(session_id)
+                if not session_data:
+                    logger.info(f"Relay loop: session_id {session_id} removed from store, exiting.")
+                    break
+                
+                websocket = session_data.get("websocket")
+                sc = response.server_content
+                
+                if sc:
+                    if getattr(sc, 'interrupted', False):
+                        logger.info(f"Gemini Server reported: INTERRUPTED")
+                    if getattr(sc, 'turn_complete', False):
+                        logger.info(f"Gemini Server reported: TURN COMPLETE")
+                
+                if sc and sc.model_turn:
+                    for part in sc.model_turn.parts:
+                        if part.inline_data:
+                            if websocket:
+                                try:
+                                    await websocket.send_bytes(part.inline_data.data)
+                                except Exception as e:
+                                    logger.debug(f"Could not send bytes to websocket: {e}")
+                
+                if sc and sc.output_transcription:
+                    text = sc.output_transcription.text
+                    logger.info(f"AI Transcript: {text}")
+                    ts = int((time.time() - start_time) * 1000)
+                    transcript_history.append({"speaker": "interviewer", "text": text, "timestamp": ts})
+                    
+                    if db_session_id:
+                        asyncio.create_task(queries.record_transcript(db_session_id, "interviewer", text, ts))
+                    
+                    if websocket:
                         try:
-                            await websocket.send_bytes(part.inline_data.data)
-                        except: pass # Socket might be closed during reconnection
+                            await websocket.send_json({"type": "transcript", "speaker": "interviewer", "text": text})
+                        except Exception as e:
+                            logger.debug(f"Could not send transcript to websocket: {e}")
+                    
+                if sc and sc.input_transcription:
+                    text = sc.input_transcription.text
+                    logger.info(f"Candidate Transcript: {text}")
+                    ts = int((time.time() - start_time) * 1000)
+                    transcript_history.append({"speaker": "candidate", "text": text, "timestamp": ts})
+                    
+                    if db_session_id:
+                        asyncio.create_task(queries.record_transcript(db_session_id, "candidate", text, ts))
+                    
+                    if websocket:
+                        try:
+                            await websocket.send_json({"type": "transcript", "speaker": "candidate", "text": text})
+                        except Exception as e:
+                            logger.debug(f"Could not send input transcript to websocket: {e}")
+                    
+                if sc and getattr(sc, 'turn_complete', False):
+                    if websocket:
+                        try:
+                            await websocket.send_json({"type": "turn_complete"})
+                        except: pass
             
-            if sc and sc.output_transcription:
-                text = sc.output_transcription.text
-                ts = int((time.time() - start_time) * 1000)
-                transcript_history.append({"speaker": "interviewer", "text": text, "timestamp": ts})
-                
-                if db_session_id:
-                    asyncio.create_task(queries.record_transcript(db_session_id, "interviewer", text, ts))
-                
-                try:
-                    await websocket.send_json({"type": "transcript", "speaker": "interviewer", "text": text})
-                except: pass
-                
-            if sc and sc.input_transcription:
-                text = sc.input_transcription.text
-                ts = int((time.time() - start_time) * 1000)
-                transcript_history.append({"speaker": "candidate", "text": text, "timestamp": ts})
-                
-                if db_session_id:
-                    asyncio.create_task(queries.record_transcript(db_session_id, "candidate", text, ts))
-                
-                try:
-                    await websocket.send_json({"type": "transcript", "speaker": "candidate", "text": text})
-                except: pass
-                
-            if sc and sc.turn_complete:
-                try:
-                    await websocket.send_json({"type": "turn_complete"})
-                except: pass
+            # Check if session was deleted during the receive yield
+            if not session_store.get(session_id):
+                break
                 
     except Exception as e:
         logger.error(f"Relay error for {session_id}: {e}", exc_info=True)
     finally:
+        logger.info(f"Relay task finishing for session: {session_id}")
         # Ensure session is closed
-        await genai_session.__aexit__(None, None, None)
-        
-        session_data = session_store.get(session_id)
-        if session_data and not session_data.get("completed"):
-            logger.info(f"Completing session in relay cleanup: {session_id}")
-            session_data["completed"] = True
-            full_transcript = "\n".join([f"{t['speaker']}: {t['text']}" for t in transcript_history])
-            if full_transcript:
-                scorecard = await evaluator.generate_scorecard(full_transcript, session_data.get("job_description"))
-                
-                # Save scorecard to DB
-                if session_data.get("db_session_id"):
-                    try:
-                        overall_score = scorecard.get("overall_score", 0)
-                        await queries.save_scorecard(session_data["db_session_id"], overall_score, scorecard)
-                    except Exception as e:
-                        logger.error(f"DB Error saving scorecard: {e}")
-                
-                try:
-                    await session_data["websocket"].send_json({"type": "scorecard", "data": scorecard})
-                except: pass
-            session_store.delete(session_id)
+        try:
+            await genai_session.__aexit__(None, None, None)
+        except: pass
 

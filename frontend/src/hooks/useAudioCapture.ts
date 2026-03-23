@@ -15,6 +15,7 @@ export function useAudioCapture(onAudioChunk: (data: ArrayBuffer) => void) {
     streamRef.current = mediaStream;
     setStream(mediaStream);
 
+    // Create context here to ensure it's within a user gesture
     const audioContext = new AudioContext({ sampleRate: 48000 });
     audioContextRef.current = audioContext;
 

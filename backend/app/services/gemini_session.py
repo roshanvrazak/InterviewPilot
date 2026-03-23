@@ -1,10 +1,17 @@
+import logging
 from google import genai
 from google.genai import types
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 class GeminiSessionManager:
     def __init__(self):
+        key = settings.GOOGLE_API_KEY
+        masked_key = f"{key[:4]}...{key[-4:]}" if key else "MISSING"
+        logger.info(f"Initializing GeminiSessionManager with API key: {masked_key}")
         self.client = genai.Client(api_key=settings.GOOGLE_API_KEY)
+        # Use verified native audio model
         self.model = "gemini-2.5-flash-native-audio-preview-12-2025"
 
     async def connect(self, system_prompt: str):

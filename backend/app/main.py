@@ -45,9 +45,25 @@ async def periodic_cleanup():
         await asyncio.sleep(60)
         session_store.cleanup(max_age=300) # Cleanup sessions older than 5 minutes
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(lifespan=lifespan)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(interview.router)
 app.include_router(jd_processor.router)
+
+@app.get("/")
+async def root():
+    return {"message": "AI Mock Interviewer Backend is running"}
 
 @app.get("/health/db")
 async def health_db():

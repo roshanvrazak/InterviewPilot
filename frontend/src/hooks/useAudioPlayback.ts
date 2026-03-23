@@ -7,7 +7,8 @@ export function useAudioPlayback() {
   const sourcesRef = useRef<AudioBufferSourceNode[]>([]);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
-  const init = useCallback(() => {
+  const init = useCallback(async () => {
+    // Create context here to ensure it's within a user gesture
     const ctx = new AudioContext({ sampleRate: 24000 });
     audioContextRef.current = ctx;
     

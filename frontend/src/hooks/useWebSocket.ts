@@ -7,7 +7,19 @@ export function useWebSocket(onAudio: (data: ArrayBuffer) => void, onJson: (msg:
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const urlRef = useRef<string | null>(null);
 
+  // Use refs for callbacks to ensure onmessage always has the latest versions
+  // without triggering a socket reconnection
+  const onAudioRef = useRef(onAudio);
+  const onJsonRef = useRef(onJson);
+
+  useEffect(() => {
+    onAudioRef.current = onAudio;
+    onJsonRef.current = onJson;
+  }, [onAudio, onJson]);
+
   const connect = useCallback((url: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    
     urlRef.current = url;
     const ws = new WebSocket(url);
     ws.binaryType = 'arraybuffer';
@@ -21,18 +33,31 @@ export function useWebSocket(onAudio: (data: ArrayBuffer) => void, onJson: (msg:
       }
     };
 
-    ws.onclose = () => {
+    ws.onerror = () => {
       setConnected(false);
-      // Exponential backoff
-      const timeout = Math.min(1000 * Math.pow(2, reconnectAttempt), 30000);
-      setTimeout(() => {
-        setReconnectAttempt((prev) => prev + 1);
-      }, timeout);
+      sessionStorage.removeItem('interview_session_id');
+    };
+
+    ws.onclose = (event) => {
+      setConnected(false);
+      
+      // If closed with an error code (not 1000/1001), clear the session
+      if (event.code > 1001) {
+        sessionStorage.removeItem('interview_session_id');
+      }
+
+      // Exponential backoff only if not explicitly disconnected
+      if (urlRef.current) {
+        const timeout = Math.min(1000 * Math.pow(2, reconnectAttempt), 30000);
+        setTimeout(() => {
+          setReconnectAttempt((prev) => prev + 1);
+        }, timeout);
+      }
     };
 
     ws.onmessage = (e) => {
       if (e.data instanceof ArrayBuffer) {
-        onAudio(e.data);
+        onAudioRef.current(e.data);
       } else {
         const data = JSON.parse(e.data);
         if (data.type === 'session_id') {
@@ -40,12 +65,12 @@ export function useWebSocket(onAudio: (data: ArrayBuffer) => void, onJson: (msg:
         } else if (data.type === 'scorecard') {
           sessionStorage.removeItem('interview_session_id');
         }
-        onJson(data);
+        onJsonRef.current(data);
       }
     };
 
     wsRef.current = ws;
-  }, [onAudio, onJson, reconnectAttempt]);
+  }, [reconnectAttempt]); // connect only depends on the attempt count now
 
   useEffect(() => {
     if (reconnectAttempt > 0 && !connected && urlRef.current) {
@@ -64,12 +89,13 @@ export function useWebSocket(onAudio: (data: ArrayBuffer) => void, onJson: (msg:
   }, []);
 
   const disconnect = useCallback(() => {
+    urlRef.current = null;
     if (wsRef.current) {
-      wsRef.current.onclose = null; // Prevent auto-reconnect
       wsRef.current.close();
-      setConnected(false);
-      sessionStorage.removeItem('interview_session_id');
+      wsRef.current = null;
     }
+    setConnected(false);
+    sessionStorage.removeItem('interview_session_id');
   }, []);
 
   return { connect, send, connected, disconnect };
