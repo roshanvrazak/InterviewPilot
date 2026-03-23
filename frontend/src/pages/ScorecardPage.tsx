@@ -44,6 +44,14 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ scorecard, onResta
     return null;
   }, [scorecard?.audioBlob]);
 
+  React.useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
+
   if (!scorecard) return null;
 
   const playSegment = (start: number, end: number) => {

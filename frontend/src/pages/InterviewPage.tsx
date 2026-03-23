@@ -47,6 +47,15 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
             : last.text + " " + msg.text; 
           return [...prev.slice(0, -1), { ...last, text: newText }];
         }
+
+        // New speaker - start a new segment
+        const now = performance.now() - interviewStartTimeRef.current;
+        if (currentSegmentRef.current) {
+          const start = currentSegmentRef.current.start;
+          setSegments(s => [...s, { start, end: now }]);
+        }
+        currentSegmentRef.current = { start: now };
+
         return [...prev, msg];
       });
     } else if (msg.type === 'history') {
@@ -170,7 +179,7 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
         AI Mock Interview
       </h1>
       
-      <div className="grid grid-cols-2 gap-6 mb-8 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
         <div className="flex flex-col items-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
           <div className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-widest">Candidate (You)</div>
           <div className="bg-white dark:bg-slate-900 p-4 rounded-lg shadow-inner">

@@ -94,7 +94,10 @@ function MainApp() {
           <AuthPage onLoginSuccess={() => setPage('home')} />
         )}
         {page === 'dashboard' && (
-          <DashboardPage onLoginPrompt={() => setPage('auth')} />
+          <DashboardPage 
+            onLoginPrompt={() => setPage('auth')} 
+            onGoToHome={() => setPage('home')}
+          />
         )}
       </main>
     </div>
