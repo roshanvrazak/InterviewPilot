@@ -5,6 +5,7 @@ import { useAudioCapture } from '../hooks/useAudioCapture';
 import { useAudioPlayback } from '../hooks/useAudioPlayback';
 import { useMediaRecorder } from '../hooks/useMediaRecorder';
 import { AudioVisualizer, VisualizerState } from '../components/AudioVisualizer';
+import { useAuth } from '../context/AuthContext';
 
 interface InterviewPageProps {
   roleId: string;
@@ -14,6 +15,7 @@ interface InterviewPageProps {
 }
 
 export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty, jobDescription, onScorecard }) => {
+  const { token } = useAuth();
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'ending'>('idle');
   const [isMuted, setIsMuted] = useState(false);
@@ -127,7 +129,8 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
         type: 'start', 
         role_id: roleId, 
         difficulty: difficulty,
-        job_description: jobDescription
+        job_description: jobDescription,
+        token: token
       });
     }
   }, [connected, stream, status, startRecording, send, roleId, difficulty, jobDescription]);
