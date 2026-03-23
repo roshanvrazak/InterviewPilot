@@ -59,6 +59,7 @@ async def interview_ws(websocket: WebSocket):
                 logger.info(f"Starting new session: {session_id}")
                 role_id = data.get("role_id", "software_engineer")
                 difficulty = data.get("difficulty", "Medium")
+                voice_name = data.get("voice_name", "Kore")
                 job_description = data.get("job_description")
                 token = data.get("token")
                 
@@ -94,7 +95,7 @@ async def interview_ws(websocket: WebSocket):
                 # Connect to Gemini
                 try:
                     logger.info(f"Attempting to connect to Gemini model: {session_manager.model}")
-                    genai_session = await session_manager.connect(system_prompt)
+                    genai_session = await session_manager.connect(system_prompt, voice_name=voice_name)
                     # We enter the context here but the relay task will manage it
                     live_session = await genai_session.__aenter__()
                     logger.info("Successfully connected to Gemini Live session")
