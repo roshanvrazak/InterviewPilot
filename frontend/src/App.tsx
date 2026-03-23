@@ -5,6 +5,7 @@ import { ScorecardPage } from './pages/ScorecardPage';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 
 function MainApp() {
   const [page, setPage] = useState<'home' | 'interview' | 'scorecard' | 'auth' | 'dashboard'>('home');
@@ -14,6 +15,7 @@ function MainApp() {
   const [selectedVoice, setSelectedVoice] = useState<string>('Kore');
   const [scorecard, setScorecard] = useState<any>(null);
   const { isAuthenticated, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const handleSelectRole = (id: string, diff: string, jd: string) => {
     setRoleId(id);
@@ -28,19 +30,27 @@ function MainApp() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm p-4 flex justify-between items-center">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
+      <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 flex justify-between items-center">
         <div className="text-xl font-bold cursor-pointer" onClick={() => setPage('home')}>
           AI Mock Interviewer
         </div>
-        <div className="flex gap-4">
-          <button onClick={() => setPage('home')} className="text-gray-600 hover:text-blue-600">Home</button>
-          <button onClick={() => setPage('dashboard')} className="text-gray-600 hover:text-blue-600">Dashboard</button>
-          {isAuthenticated ? (
-            <button onClick={() => { logout(); setPage('home'); }} className="text-gray-600 hover:text-blue-600">Logout</button>
-          ) : (
-            <button onClick={() => setPage('auth')} className="text-gray-600 hover:text-blue-600">Login</button>
-          )}
+        <div className="flex items-center gap-6">
+          <div className="flex gap-4">
+            <button onClick={() => setPage('home')} className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">Home</button>
+            <button onClick={() => setPage('dashboard')} className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">Dashboard</button>
+            {isAuthenticated ? (
+              <button onClick={() => { logout(); setPage('home'); }} className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">Logout</button>
+            ) : (
+              <button onClick={() => setPage('auth')} className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">Login</button>
+            )}
+          </div>
+          <button 
+            onClick={toggleTheme} 
+            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            {theme === 'light' ? '🌙' : '☀️'}
+          </button>
         </div>
       </nav>
 
@@ -80,9 +90,11 @@ function MainApp() {
 
 function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
