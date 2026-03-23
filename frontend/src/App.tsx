@@ -3,6 +3,7 @@ import { HomePage } from './pages/HomePage';
 import { InterviewPage } from './pages/InterviewPage';
 import { ScorecardPage } from './pages/ScorecardPage';
 import { AuthPage } from './pages/AuthPage';
+import { DashboardPage } from './pages/DashboardPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function MainApp() {
@@ -62,14 +63,7 @@ function MainApp() {
           <AuthPage onLoginSuccess={() => setPage('home')} />
         )}
         {page === 'dashboard' && (
-          <div className="p-8 text-center">
-            <h2 className="text-2xl font-bold mb-4">Dashboard</h2>
-            {isAuthenticated ? (
-              <p>Welcome to your dashboard! Features coming soon.</p>
-            ) : (
-              <p>Please <button onClick={() => setPage('auth')} className="text-blue-500 underline">login</button> to view your dashboard.</p>
-            )}
-          </div>
+          <DashboardPage onLoginPrompt={() => setPage('auth')} />
         )}
       </main>
     </div>
