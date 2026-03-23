@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { HomePage } from './pages/HomePage';
 import { InterviewPage } from './pages/InterviewPage';
+import { MicCheckPage } from './pages/MicCheckPage';
 import { ScorecardPage } from './pages/ScorecardPage';
 import { AuthPage } from './pages/AuthPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -8,7 +9,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 
 function MainApp() {
-  const [page, setPage] = useState<'home' | 'interview' | 'scorecard' | 'auth' | 'dashboard'>('home');
+  const [page, setPage] = useState<'home' | 'interview' | 'mic-check' | 'scorecard' | 'auth' | 'dashboard'>('home');
   const [roleId, setRoleId] = useState<string>('');
   const [difficulty, setDifficulty] = useState<string>('Medium');
   const [jobDescription, setJobDescription] = useState<string>('');
@@ -21,6 +22,10 @@ function MainApp() {
     setRoleId(id);
     setDifficulty(diff);
     setJobDescription(jd);
+    setPage('mic-check');
+  };
+
+  const handleStartInterview = () => {
     setPage('interview');
   };
 
@@ -60,6 +65,14 @@ function MainApp() {
             onSelectRole={handleSelectRole} 
             selectedVoice={selectedVoice} 
             setSelectedVoice={setSelectedVoice} 
+          />
+        )}
+        {page === 'mic-check' && (
+          <MicCheckPage
+            roleId={roleId}
+            selectedVoice={selectedVoice}
+            onStartInterview={handleStartInterview}
+            onBack={() => setPage('home')}
           />
         )}
         {page === 'interview' && (
