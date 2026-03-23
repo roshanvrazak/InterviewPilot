@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
+import { HomePage } from './pages/HomePage';
 import { InterviewPage } from './pages/InterviewPage';
 import { ScorecardPage } from './pages/ScorecardPage';
 
 function App() {
-  const [page, setPage] = useState<'interview' | 'scorecard'>('interview');
+  const [page, setPage] = useState<'home' | 'interview' | 'scorecard'>('home');
+  const [roleId, setRoleId] = useState<string>('');
   const [scorecard, setScorecard] = useState<any>(null);
+
+  const handleSelectRole = (id: string) => {
+    setRoleId(id);
+    setPage('interview');
+  };
 
   const handleScorecard = (data: any) => {
     setScorecard(data);
@@ -12,12 +19,10 @@ function App() {
   };
 
   return (
-    <div className="App">
-      {page === 'interview' ? (
-        <InterviewPage onScorecard={handleScorecard} />
-      ) : (
-        <ScorecardPage scorecard={scorecard} onRestart={() => setPage('interview')} />
-      )}
+    <div className="min-h-screen bg-gray-50">
+      {page === 'home' && <HomePage onSelectRole={handleSelectRole} />}
+      {page === 'interview' && <InterviewPage roleId={roleId} onScorecard={handleScorecard} />}
+      {page === 'scorecard' && <ScorecardPage scorecard={scorecard} onRestart={() => setPage('home')} />}
     </div>
   );
 }

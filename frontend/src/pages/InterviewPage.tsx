@@ -5,10 +5,11 @@ import { useAudioCapture } from '../hooks/useAudioCapture';
 import { useAudioPlayback } from '../hooks/useAudioPlayback';
 
 interface InterviewPageProps {
+  roleId: string;
   onScorecard: (data: any) => void;
 }
 
-export const InterviewPage: React.FC<InterviewPageProps> = ({ onScorecard }) => {
+export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecard }) => {
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const { init: initPlayback, playChunk, stop: stopPlayback } = useAudioPlayback();
   
@@ -36,13 +37,13 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ onScorecard }) => 
 
   useEffect(() => {
     if (connected) {
-      send({ type: 'start' });
+      send({ type: 'start', role_id: roleId });
       startCapture();
     } else {
       stopCapture();
       stopPlayback();
     }
-  }, [connected, send, startCapture, stopCapture, stopPlayback]);
+  }, [connected, send, startCapture, stopCapture, stopPlayback, roleId]);
 
   return (
     <div className="p-4">

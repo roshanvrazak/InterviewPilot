@@ -20,7 +20,10 @@ async def interview_ws(websocket: WebSocket):
         if "text" in message:
             data = json.loads(message["text"])
             if data["type"] == "start":
-                system_prompt = "You are a senior technical interviewer. Ask exactly 5 main questions."
+                role_id = data.get("role_id", "software_engineer")
+                role_name = role_id.replace("_", " ").title()
+                system_prompt = f"You are a senior {role_name} interviewer. Ask exactly 5 main questions focusing on {role_name} skills and experience."
+                
                 # Correctly enter the async context manager
                 async with await session_manager.connect(system_prompt) as session:
                     # Start the relay task
