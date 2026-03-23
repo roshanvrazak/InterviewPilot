@@ -23,6 +23,9 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
     if (msg.type === 'transcript') {
       setStatus('active'); // First transcript means we are active
       setTranscripts(prev => [...prev, msg]);
+    } else if (msg.type === 'history') {
+      setTranscripts(msg.history);
+      setStatus('active'); // Restore status as well
     } else if (msg.type === 'scorecard') {
       onScorecard(msg.data);
     }

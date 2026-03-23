@@ -31,6 +31,11 @@ async def interview_ws(websocket: WebSocket):
                 if session_data:
                     # Update the websocket in the relay task if necessary
                     session_data["websocket"] = websocket
+                    # Restore transcript history
+                    await websocket.send_json({
+                        "type": "history", 
+                        "history": session_data["transcript_history"]
+                    })
                 else:
                     # Session not found, start a new one
                     data["type"] = "start"
@@ -52,7 +57,8 @@ async def interview_ws(websocket: WebSocket):
                     "genai_session": genai_session,
                     "transcript_history": transcript_history,
                     "websocket": websocket,
-                    "relay_task": None
+                    "relay_task": None,
+                    "completed": False
                 }
                 session_store.save(session_id, session_data)
                 await websocket.send_json({"type": "session_id", "session_id": session_id})
@@ -80,11 +86,20 @@ async def interview_ws(websocket: WebSocket):
                 elif "text" in message:
                     data = json.loads(message["text"])
                     if data["type"] == "end":
-                        # Cleanup session
+                        # Mark as completed
+                        session_data["completed"] = True
+                        # Generate scorecard and then cleanup
+                        full_transcript = "\n".join([f"{t['speaker']}: {t['text']}" for t in session_data["transcript_history"]])
+                        if full_transcript:
+                            scorecard = await evaluator.generate_scorecard(full_transcript)
+                            try:
+                                await websocket.send_json({"type": "scorecard", "data": scorecard})
+                            except: pass
                         session_store.delete(session_id)
                         break
     
     except WebSocketDisconnect:
+        # Don't delete the session on disconnect to allow reconnection
         pass
     except Exception as e:
         print(f"WebSocket error: {e}")
@@ -143,11 +158,9 @@ async def relay_gemini_to_browser(session_id: str):
         # Ensure session is closed
         await genai_session.__aexit__(None, None, None)
         
-        # When relay finishes, if it was NOT an explicit deletion (e.g., error or turn end)
-        # we might want to generate scorecard if it's the end of session.
-        # But for now, we follow the simple delete-on-end logic.
         session_data = session_store.get(session_id)
-        if session_data:
+        if session_data and not session_data.get("completed"):
+            session_data["completed"] = True
             full_transcript = "\n".join([f"{t['speaker']}: {t['text']}" for t in transcript_history])
             if full_transcript:
                 scorecard = await evaluator.generate_scorecard(full_transcript)
