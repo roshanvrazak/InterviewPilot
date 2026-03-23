@@ -7,7 +7,7 @@ from google.genai import types
 from app.services.gemini_session import GeminiSessionManager
 from app.services.evaluator import EvaluatorService
 from app.services.session_store import session_store
-from app.utils.prompts import INTERVIEWER_SYSTEM_PROMPT, ROLE_CONFIGS
+from app.utils.prompts import INTERVIEWER_SYSTEM_PROMPT, ROLE_CONFIGS, DIFFICULTY_CONFIGS
 
 router = APIRouter()
 session_manager = GeminiSessionManager()
@@ -43,8 +43,14 @@ async def interview_ws(websocket: WebSocket):
             if data["type"] == "start":
                 session_id = str(uuid.uuid4())
                 role_id = data.get("role_id", "software_engineer")
+                difficulty = data.get("difficulty", "Medium")
+                
                 role_config = ROLE_CONFIGS.get(role_id, ROLE_CONFIGS["software_engineer"])
-                system_prompt = INTERVIEWER_SYSTEM_PROMPT.format(**role_config)
+                diff_config = DIFFICULTY_CONFIGS.get(difficulty, DIFFICULTY_CONFIGS["Medium"])
+                
+                # Combine role and difficulty configurations
+                combined_config = {**role_config, **diff_config}
+                system_prompt = INTERVIEWER_SYSTEM_PROMPT.format(**combined_config)
                 
                 # Connect to Gemini
                 genai_session = await session_manager.connect(system_prompt)

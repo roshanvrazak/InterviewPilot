@@ -7,10 +7,11 @@ import { AudioVisualizer, VisualizerState } from '../components/AudioVisualizer'
 
 interface InterviewPageProps {
   roleId: string;
+  difficulty: string;
   onScorecard: (data: any) => void;
 }
 
-export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecard }) => {
+export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty, onScorecard }) => {
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'ending'>('idle');
   const [isInterrupted, setIsInterrupted] = useState(false);
@@ -87,13 +88,13 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
 
   useEffect(() => {
     if (connected) {
-      send({ type: 'start', role_id: roleId });
+      send({ type: 'start', role_id: roleId, difficulty: difficulty });
       startCapture();
     } else {
       stopCapture();
       stopPlayback();
     }
-  }, [connected, send, startCapture, stopCapture, stopPlayback, roleId]);
+  }, [connected, send, startCapture, stopCapture, stopPlayback, roleId, difficulty]);
 
   const getAIState = (): VisualizerState => {
     if (status === 'connecting') return 'Connecting';
