@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAudioCapture } from '../hooks/useAudioCapture';
 import { useAudioPlayback } from '../hooks/useAudioPlayback';
+import { useMediaRecorder } from '../hooks/useMediaRecorder';
 import { AudioVisualizer, VisualizerState } from '../components/AudioVisualizer';
 
 interface InterviewPageProps {
@@ -17,7 +18,14 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'ending'>('idle');
   const [isInterrupted, setIsInterrupted] = useState(false);
   const { init: initPlayback, playChunk, stop: stopPlayback, stopAll, analyser: playbackAnalyser } = useAudioPlayback();
+  const { start: startRecording, stop: stopRecording, audioBlob } = useMediaRecorder();
   
+  const [segments, setSegments] = useState<{start: number, end: number}[]>([]);
+  const interviewStartTimeRef = useRef<number>(0);
+  const currentSegmentRef = useRef<{start: number} | null>(null);
+  const scorecardRef = useRef<any>(null);
+  const [hasReportedScorecard, setHasReportedScorecard] = useState(false);
+
   const lastInterruptionRef = useRef<number>(0);
 
   const onAudio = useCallback((data: ArrayBuffer) => {
@@ -32,12 +40,19 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
       setTranscripts(msg.history);
       setStatus('active'); // Restore status as well
     } else if (msg.type === 'scorecard') {
-      onScorecard(msg.data);
+      scorecardRef.current = msg.data;
     }
-  }, [onScorecard, setStatus]);
+  }, [setStatus]);
+
+  useEffect(() => {
+    if (audioBlob && scorecardRef.current && !hasReportedScorecard) {
+      setHasReportedScorecard(true);
+      onScorecard({ ...scorecardRef.current, audioBlob, segments });
+    }
+  }, [audioBlob, segments, onScorecard, hasReportedScorecard]);
 
   const { connect, send, connected } = useWebSocket(onAudio, onJson);
-  const { start: startCapture, stop: stopCapture, analyser: captureAnalyser } = useAudioCapture((audioData) => {
+  const { start: startCapture, stop: stopCapture, analyser: captureAnalyser, stream } = useAudioCapture((audioData) => {
     send(audioData);
   });
 
@@ -50,11 +65,25 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
   const handleEnd = () => {
     if (window.confirm("Are you sure you want to end the interview?")) {
       setStatus('ending');
+      stopRecording();
+      if (currentSegmentRef.current) {
+        const endTime = performance.now() - interviewStartTimeRef.current;
+        setSegments(prev => [...prev, { ...currentSegmentRef.current!, end: endTime }]);
+        currentSegmentRef.current = null;
+      }
       send({ type: 'end' });
     }
   };
 
-  // Interruption detection logic
+  // Recording and segment tracking logic
+  useEffect(() => {
+    if (connected && stream && status === 'connecting') {
+      interviewStartTimeRef.current = performance.now();
+      startRecording(stream);
+    }
+  }, [connected, stream, status, startRecording]);
+
+  // Interruption and segment detection logic
   useEffect(() => {
     if (!connected || !captureAnalyser || !playbackAnalyser || status !== 'active') return;
 
@@ -62,18 +91,29 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
     const captureData = new Uint8Array(captureAnalyser.frequencyBinCount);
     const playbackData = new Uint8Array(playbackAnalyser.frequencyBinCount);
 
-    const checkInterruption = () => {
-      animationFrameId = requestAnimationFrame(checkInterruption);
+    const checkAudioLevels = () => {
+      animationFrameId = requestAnimationFrame(checkAudioLevels);
       
       captureAnalyser.getByteFrequencyData(captureData);
       playbackAnalyser.getByteFrequencyData(playbackData);
 
-      // Simple RMS-like volume check
       const captureLevel = captureData.reduce((a, b) => a + b, 0) / captureData.length;
       const playbackLevel = playbackData.reduce((a, b) => a + b, 0) / playbackData.length;
 
-      // If user is speaking (captureLevel > 5) while AI is speaking (playbackLevel > 5)
-      // And we haven't interrupted in the last 1 second to avoid double triggers
+      const now = performance.now() - interviewStartTimeRef.current;
+
+      // Segment tracking: Candidate starts speaking
+      if (captureLevel > 15 && playbackLevel < 5 && !currentSegmentRef.current) {
+        currentSegmentRef.current = { start: now };
+      }
+
+      // Segment tracking: Candidate stops speaking (AI starts)
+      if (playbackLevel > 10 && currentSegmentRef.current) {
+        setSegments(prev => [...prev, { ...currentSegmentRef.current!, end: now }]);
+        currentSegmentRef.current = null;
+      }
+
+      // Interruption logic
       if (captureLevel > 15 && playbackLevel > 5 && Date.now() - lastInterruptionRef.current > 1000) {
         lastInterruptionRef.current = Date.now();
         stopAll();
@@ -83,7 +123,7 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
       }
     };
 
-    checkInterruption();
+    checkAudioLevels();
     return () => cancelAnimationFrame(animationFrameId);
   }, [connected, captureAnalyser, playbackAnalyser, status, stopAll, send]);
 

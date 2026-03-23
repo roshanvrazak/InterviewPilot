@@ -6,19 +6,21 @@ export function useAudioCapture(onAudioChunk: (data: ArrayBuffer) => void) {
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const start = useCallback(async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({
+    const mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: { sampleRate: 48000, channelCount: 1, echoCancellation: true, noiseSuppression: true }
     });
-    streamRef.current = stream;
+    streamRef.current = mediaStream;
+    setStream(mediaStream);
 
     const audioContext = new AudioContext({ sampleRate: 48000 });
     audioContextRef.current = audioContext;
 
     await audioContext.audioWorklet.addModule('/pcm-processor.js');
 
-    const source = audioContext.createMediaStreamSource(stream);
+    const source = audioContext.createMediaStreamSource(mediaStream);
     
     const analyserNode = audioContext.createAnalyser();
     analyserNode.fftSize = 256;
@@ -40,7 +42,8 @@ export function useAudioCapture(onAudioChunk: (data: ArrayBuffer) => void) {
     audioContextRef.current?.close();
     streamRef.current?.getTracks().forEach(track => track.stop());
     setAnalyser(null);
+    setStream(null);
   }, []);
 
-  return { start, stop, analyser };
+  return { start, stop, analyser, stream };
 }
