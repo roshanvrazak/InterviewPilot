@@ -5,6 +5,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from google.genai import types
 from app.services.gemini_session import GeminiSessionManager
 from app.services.evaluator import EvaluatorService
+from app.utils.prompts import INTERVIEWER_SYSTEM_PROMPT, ROLE_CONFIGS
 
 router = APIRouter()
 session_manager = GeminiSessionManager()
@@ -21,8 +22,8 @@ async def interview_ws(websocket: WebSocket):
             data = json.loads(message["text"])
             if data["type"] == "start":
                 role_id = data.get("role_id", "software_engineer")
-                role_name = role_id.replace("_", " ").title()
-                system_prompt = f"You are a senior {role_name} interviewer. Ask exactly 5 main questions focusing on {role_name} skills and experience."
+                role_config = ROLE_CONFIGS.get(role_id, ROLE_CONFIGS["software_engineer"])
+                system_prompt = INTERVIEWER_SYSTEM_PROMPT.format(**role_config)
                 
                 # Correctly enter the async context manager
                 async with await session_manager.connect(system_prompt) as session:
