@@ -6,3 +6,5 @@ pydantic-settings
 asyncpg
 websockets
 httpx
+pymupdf
+python-docx

@@ -2,7 +2,7 @@
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.routers import interview
+from app.routers import interview, jd_processor
 from app.services.session_store import session_store
 
 @asynccontextmanager
@@ -24,3 +24,4 @@ async def periodic_cleanup():
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(interview.router)
+app.include_router(jd_processor.router)
