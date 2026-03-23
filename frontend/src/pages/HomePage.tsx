@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RoleCard } from '../components/RoleCard';
+import { JDInput } from '../components/JDInput';
 
 const roles = [
   { id: 'software_engineer', name: 'Software Engineer', description: 'General technical interview focusing on coding and system design.', type: 'Mixed' },
@@ -11,11 +12,12 @@ const roles = [
 const difficulties = ['Easy', 'Medium', 'Hard'];
 
 interface HomePageProps {
-  onSelectRole: (id: string, difficulty: string) => void;
+  onSelectRole: (id: string, difficulty: string, jd: string) => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ onSelectRole }) => {
   const [difficulty, setDifficulty] = useState('Medium');
+  const [jobDescription, setJobDescription] = useState('');
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4">
@@ -43,13 +45,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectRole }) => {
         </div>
       </div>
 
+      <JDInput onJDChange={setJobDescription} />
+
       <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">Select Your Role</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {roles.map(role => (
           <RoleCard 
             key={role.id} 
             {...role} 
-            onSelect={(id) => onSelectRole(id, difficulty)} 
+            onSelect={(id) => onSelectRole(id, difficulty, jobDescription)} 
           />
         ))}
       </div>
