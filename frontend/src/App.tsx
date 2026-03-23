@@ -11,6 +11,7 @@ function MainApp() {
   const [roleId, setRoleId] = useState<string>('');
   const [difficulty, setDifficulty] = useState<string>('Medium');
   const [jobDescription, setJobDescription] = useState<string>('');
+  const [selectedVoice, setSelectedVoice] = useState<string>('Kore');
   const [scorecard, setScorecard] = useState<any>(null);
   const { isAuthenticated, logout } = useAuth();
 
@@ -44,12 +45,19 @@ function MainApp() {
       </nav>
 
       <main>
-        {page === 'home' && <HomePage onSelectRole={handleSelectRole} />}
+        {page === 'home' && (
+          <HomePage 
+            onSelectRole={handleSelectRole} 
+            selectedVoice={selectedVoice} 
+            setSelectedVoice={setSelectedVoice} 
+          />
+        )}
         {page === 'interview' && (
           <InterviewPage 
             roleId={roleId} 
             difficulty={difficulty} 
             jobDescription={jobDescription}
+            selectedVoice={selectedVoice}
             onScorecard={handleScorecard} 
           />
         )}

@@ -12,9 +12,10 @@ interface InterviewPageProps {
   difficulty: string;
   jobDescription: string;
   onScorecard: (data: any) => void;
+  selectedVoice: string;
 }
 
-export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty, jobDescription, onScorecard }) => {
+export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty, jobDescription, onScorecard, selectedVoice }) => {
   const { token } = useAuth();
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'ending'>('idle');
@@ -130,10 +131,11 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
         role_id: roleId, 
         difficulty: difficulty,
         job_description: jobDescription,
-        token: token
+        token: token,
+        voice_name: selectedVoice
       });
     }
-  }, [connected, stream, status, startRecording, send, roleId, difficulty, jobDescription]);
+  }, [connected, stream, status, startRecording, send, roleId, difficulty, jobDescription, token, selectedVoice]);
 
   // Handle cleanup on unmount
   useEffect(() => {
