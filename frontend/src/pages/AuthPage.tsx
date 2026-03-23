@@ -15,7 +15,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    const endpoint = isLogin ? '/auth/login' : '/auth/register';
+    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
     const body = isLogin 
       ? new URLSearchParams({ username, password }) 
       : JSON.stringify({ username, password });
