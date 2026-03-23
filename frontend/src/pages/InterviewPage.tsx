@@ -1,9 +1,9 @@
 // frontend/src/pages/InterviewPage.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAudioCapture } from '../hooks/useAudioCapture';
 import { useAudioPlayback } from '../hooks/useAudioPlayback';
-import { AudioVisualizer } from '../components/AudioVisualizer';
+import { AudioVisualizer, VisualizerState } from '../components/AudioVisualizer';
 
 interface InterviewPageProps {
   roleId: string;
@@ -13,8 +13,11 @@ interface InterviewPageProps {
 export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecard }) => {
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'ending'>('idle');
-  const { init: initPlayback, playChunk, stop: stopPlayback, analyser: playbackAnalyser } = useAudioPlayback();
+  const [isInterrupted, setIsInterrupted] = useState(false);
+  const { init: initPlayback, playChunk, stop: stopPlayback, stopAll, analyser: playbackAnalyser } = useAudioPlayback();
   
+  const lastInterruptionRef = useRef<number>(0);
+
   const onAudio = useCallback((data: ArrayBuffer) => {
     playChunk(data);
   }, [playChunk]);
@@ -49,6 +52,39 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
     }
   };
 
+  // Interruption detection logic
+  useEffect(() => {
+    if (!connected || !captureAnalyser || !playbackAnalyser || status !== 'active') return;
+
+    let animationFrameId: number;
+    const captureData = new Uint8Array(captureAnalyser.frequencyBinCount);
+    const playbackData = new Uint8Array(playbackAnalyser.frequencyBinCount);
+
+    const checkInterruption = () => {
+      animationFrameId = requestAnimationFrame(checkInterruption);
+      
+      captureAnalyser.getByteFrequencyData(captureData);
+      playbackAnalyser.getByteFrequencyData(playbackData);
+
+      // Simple RMS-like volume check
+      const captureLevel = captureData.reduce((a, b) => a + b, 0) / captureData.length;
+      const playbackLevel = playbackData.reduce((a, b) => a + b, 0) / playbackData.length;
+
+      // If user is speaking (captureLevel > 5) while AI is speaking (playbackLevel > 5)
+      // And we haven't interrupted in the last 1 second to avoid double triggers
+      if (captureLevel > 15 && playbackLevel > 5 && Date.now() - lastInterruptionRef.current > 1000) {
+        lastInterruptionRef.current = Date.now();
+        stopAll();
+        send({ type: 'interrupted' });
+        setIsInterrupted(true);
+        setTimeout(() => setIsInterrupted(false), 1000);
+      }
+    };
+
+    checkInterruption();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [connected, captureAnalyser, playbackAnalyser, status, stopAll, send]);
+
   useEffect(() => {
     if (connected) {
       send({ type: 'start', role_id: roleId });
@@ -59,6 +95,19 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
     }
   }, [connected, send, startCapture, stopCapture, stopPlayback, roleId]);
 
+  const getAIState = (): VisualizerState => {
+    if (status === 'connecting') return 'Connecting';
+    if (isInterrupted) return 'Interrupted';
+    if (status === 'active') return 'Speaking';
+    return 'Idle';
+  };
+
+  const getUserState = (): VisualizerState => {
+    if (status === 'connecting') return 'Connecting';
+    if (status === 'active') return 'Listening';
+    return 'Idle';
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">AI Mock Interview</h1>
@@ -66,11 +115,11 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
       <div className="flex justify-around mb-8 bg-white p-6 rounded-lg shadow-sm">
         <div className="text-center">
           <div className="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">You</div>
-          <AudioVisualizer analyser={captureAnalyser} color="#10b981" />
+          <AudioVisualizer analyser={captureAnalyser} state={getUserState()} color="#10b981" />
         </div>
         <div className="text-center">
           <div className="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">Alex (AI)</div>
-          <AudioVisualizer analyser={playbackAnalyser} color="#3b82f6" />
+          <AudioVisualizer analyser={playbackAnalyser} state={getAIState()} color="#3b82f6" />
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { useRef, useCallback, useState } from 'react';
 export function useAudioPlayback() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
+  const sourcesRef = useRef<AudioBufferSourceNode[]>([]);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
   const init = useCallback(() => {
@@ -16,6 +17,7 @@ export function useAudioPlayback() {
     setAnalyser(analyserNode);
 
     nextStartTimeRef.current = 0;
+    sourcesRef.current = [];
   }, []);
 
   const playChunk = useCallback((pcmData: ArrayBuffer) => {
@@ -34,6 +36,11 @@ export function useAudioPlayback() {
     const source = ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(analyser);
+    
+    sourcesRef.current.push(source);
+    source.onended = () => {
+      sourcesRef.current = sourcesRef.current.filter(s => s !== source);
+    };
 
     const currentTime = ctx.currentTime;
     const startTime = Math.max(currentTime, nextStartTimeRef.current);
@@ -41,12 +48,25 @@ export function useAudioPlayback() {
     nextStartTimeRef.current = startTime + buffer.duration;
   }, [analyser]);
 
+  const stopAll = useCallback(() => {
+    sourcesRef.current.forEach(s => {
+      try {
+        s.stop();
+      } catch (e) {
+        // Source might have already stopped
+      }
+    });
+    sourcesRef.current = [];
+    nextStartTimeRef.current = 0;
+  }, []);
+
   const stop = useCallback(() => {
+    stopAll();
     audioContextRef.current?.close();
     audioContextRef.current = null;
     setAnalyser(null);
     nextStartTimeRef.current = 0;
-  }, []);
+  }, [stopAll]);
 
-  return { init, playChunk, stop, analyser };
+  return { init, playChunk, stop, stopAll, analyser };
 }
