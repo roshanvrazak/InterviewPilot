@@ -4,6 +4,7 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
 from app.routers import interview, jd_processor
+from app.routers.interview import session_manager
 from app.services.session_store import session_store
 from app.db.connection import db_manager
 from app.utils.logging_config import setup_logging
@@ -42,6 +43,13 @@ async def health_db():
         return {"status": "ok"}
     except Exception as e:
         return Response(content=str(e), status_code=500)
+
+@app.get("/health/gemini")
+async def health_gemini():
+    is_ok = await session_manager.check_connectivity()
+    if is_ok:
+        return {"status": "ok"}
+    return Response(content="Gemini API unavailable", status_code=503)
 
 @app.get("/health/ready")
 async def health_ready():

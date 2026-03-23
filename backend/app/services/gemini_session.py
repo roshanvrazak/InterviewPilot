@@ -20,3 +20,12 @@ class GeminiSessionManager:
             output_audio_transcription=types.AudioTranscriptionConfig(),
         )
         return self.client.aio.live.connect(model=self.model, config=config)
+
+    async def check_connectivity(self) -> bool:
+        try:
+            # Attempt to fetch model metadata to verify API key and model access
+            self.client.models.get(model=self.model)
+            return True
+        except Exception as e:
+            # Log the error if needed
+            return False
