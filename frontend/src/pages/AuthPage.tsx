@@ -53,44 +53,57 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="flex justify-center items-center h-[calc(100vh-64px)] bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-96">
-        <h2 className="text-2xl mb-4 text-center">{isLogin ? 'Login' : 'Register'}</h2>
-        {error && <p className="text-red-500 mb-4 text-sm">{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Username</label>
+    <div className="flex justify-center items-center h-[calc(100vh-64px)] bg-slate-50 dark:bg-slate-950 px-4">
+      <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 w-full max-w-md">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-2">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">{isLogin ? 'Sign in to continue your interview prep' : 'Get started with your personalized AI interviewer'}</p>
+        </div>
+        
+        {error && (
+          <div className={`mb-6 p-4 rounded-xl text-sm font-medium ${error.includes('successful') ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2 ml-1">Username or Email</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              placeholder="Enter your username"
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-slate-400"
               required
             />
           </div>
-          <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2">Password</label>
+          <div>
+            <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2 ml-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+              placeholder="••••••••"
+              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-slate-400"
               required
             />
           </div>
-          <div className="flex items-center justify-between">
-            <button
-              type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-              {isLogin ? 'Sign In' : 'Sign Up'}
-            </button>
+          
+          <button
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+          >
+            {isLogin ? 'Sign In' : 'Sign Up'}
+          </button>
+
+          <div className="pt-4 text-center">
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
+              className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
             >
-              {isLogin ? 'Need an account?' : 'Already have one?'}
+              {isLogin ? "Don't have an account? Create one" : 'Already have an account? Sign In'}
             </button>
           </div>
         </form>

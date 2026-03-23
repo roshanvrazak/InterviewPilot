@@ -29,24 +29,28 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectRole, selectedVoice,
   const [jobDescription, setJobDescription] = useState('');
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4">
-      <h1 className="text-4xl font-bold mb-8 text-center text-gray-900">AI Mock Interviewer</h1>
+    <div className="max-w-4xl mx-auto py-16 px-6">
+      <div className="text-center mb-16">
+        <h1 className="text-5xl font-extrabold mb-4 text-slate-900 dark:text-white tracking-tight">AI Mock Interviewer</h1>
+        <p className="text-slate-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">Prepare for your next career move with personalized, AI-driven mock interviews.</p>
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-        <div className="text-center">
-          <p className="text-lg text-gray-600 mb-4">Choose your difficulty level:</p>
-          <div className="inline-flex rounded-md shadow-sm" role="group">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-16">
+        <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-3xl border border-slate-100 dark:border-slate-700">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+            Difficulty Level
+          </p>
+          <div className="grid grid-cols-3 gap-2 bg-slate-200/50 dark:bg-slate-900/50 p-1.5 rounded-2xl">
             {difficulties.map((diff) => (
               <button
                 key={diff}
                 type="button"
                 onClick={() => setDifficulty(diff)}
-                className={`px-6 py-2 text-sm font-medium border ${
+                className={`py-2.5 text-sm font-bold rounded-xl transition-all ${
                   difficulty === diff
-                    ? 'bg-blue-600 text-white border-blue-600 z-10'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                } ${diff === 'Easy' ? 'rounded-l-lg' : ''} ${
-                  diff === 'Hard' ? 'rounded-r-lg' : ''
+                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                 }`}
               >
                 {diff}
@@ -55,22 +59,25 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectRole, selectedVoice,
           </div>
         </div>
 
-        <div className="text-center">
-          <p className="text-lg text-gray-600 mb-4">Select Interviewer Voice:</p>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-3xl border border-slate-100 dark:border-slate-700">
+          <p className="text-sm font-semibold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
+            Interviewer Voice
+          </p>
+          <div className="grid grid-cols-2 gap-3">
             {voices.map((voice) => (
               <button
                 key={voice.id}
                 type="button"
                 onClick={() => setSelectedVoice(voice.id)}
-                className={`px-4 py-2 text-xs font-medium border rounded-lg transition-all ${
+                className={`px-4 py-3 text-left border rounded-2xl transition-all ${
                   selectedVoice === voice.id
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                    ? 'bg-white dark:bg-slate-700 border-blue-500 dark:border-blue-400 shadow-md ring-1 ring-blue-500 dark:ring-blue-400'
+                    : 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800'
                 }`}
               >
-                <div className="font-bold">{voice.name}</div>
-                <div className={`text-[10px] ${selectedVoice === voice.id ? 'text-blue-100' : 'text-gray-400'}`}>
+                <div className={`font-bold text-sm ${selectedVoice === voice.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}>{voice.name}</div>
+                <div className={`text-[10px] leading-tight ${selectedVoice === voice.id ? 'text-blue-500/70 dark:text-blue-300/70' : 'text-slate-400'}`}>
                   {voice.description}
                 </div>
               </button>
@@ -81,15 +88,20 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectRole, selectedVoice,
 
       <JDInput onJDChange={setJobDescription} />
 
-      <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">Select Your Role</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {roles.map(role => (
-          <RoleCard 
-            key={role.id} 
-            {...role} 
-            onSelect={(id) => onSelectRole(id, difficulty, jobDescription)} 
-          />
-        ))}
+      <div className="mt-16">
+        <div className="flex items-center gap-4 mb-8">
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Select Your Role</h2>
+          <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {roles.map(role => (
+            <RoleCard 
+              key={role.id} 
+              {...role} 
+              onSelect={(id) => onSelectRole(id, difficulty, jobDescription)} 
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
