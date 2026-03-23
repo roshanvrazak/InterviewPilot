@@ -66,6 +66,7 @@ async def interview_ws(websocket: WebSocket):
                     "live_session": live_session,
                     "genai_session": genai_session,
                     "transcript_history": transcript_history,
+                    "job_description": job_description,
                     "websocket": websocket,
                     "relay_task": None,
                     "completed": False
@@ -101,7 +102,7 @@ async def interview_ws(websocket: WebSocket):
                         # Generate scorecard and then cleanup
                         full_transcript = "\n".join([f"{t['speaker']}: {t['text']}" for t in session_data["transcript_history"]])
                         if full_transcript:
-                            scorecard = await evaluator.generate_scorecard(full_transcript)
+                            scorecard = await evaluator.generate_scorecard(full_transcript, session_data.get("job_description"))
                             try:
                                 await websocket.send_json({"type": "scorecard", "data": scorecard})
                             except: pass
@@ -173,7 +174,7 @@ async def relay_gemini_to_browser(session_id: str):
             session_data["completed"] = True
             full_transcript = "\n".join([f"{t['speaker']}: {t['text']}" for t in transcript_history])
             if full_transcript:
-                scorecard = await evaluator.generate_scorecard(full_transcript)
+                scorecard = await evaluator.generate_scorecard(full_transcript, session_data.get("job_description"))
                 try:
                     await session_data["websocket"].send_json({"type": "scorecard", "data": scorecard})
                 except: pass
