@@ -1,14 +1,20 @@
 # backend/app/main.py
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
 from app.routers import interview, jd_processor
 from app.services.session_store import session_store
 from app.db.connection import db_manager
+from app.utils.logging_config import setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Start background cleanup task
+    logger.info("Application starting up...")
     cleanup_task = asyncio.create_task(periodic_cleanup())
     yield
     # Clean up the cleanup task

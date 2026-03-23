@@ -3,6 +3,7 @@ import json
 import asyncio
 import uuid
 import time
+import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from google.genai import types
 from app.services.gemini_session import GeminiSessionManager
@@ -14,10 +15,12 @@ from app.db import queries
 router = APIRouter()
 session_manager = GeminiSessionManager()
 evaluator = EvaluatorService()
+logger = logging.getLogger(__name__)
 
 @router.websocket("/ws/interview")
 async def interview_ws(websocket: WebSocket):
     await websocket.accept()
+    logger.info("WebSocket connection established")
     session_id = None
     session_data = None
     
@@ -31,6 +34,7 @@ async def interview_ws(websocket: WebSocket):
                 session_id = data.get("session_id")
                 session_data = session_store.get(session_id)
                 if session_data:
+                    logger.info(f"Session reconnected: {session_id}")
                     # Update the websocket in the relay task if necessary
                     session_data["websocket"] = websocket
                     # Restore transcript history
@@ -39,11 +43,13 @@ async def interview_ws(websocket: WebSocket):
                         "history": session_data["transcript_history"]
                     })
                 else:
+                    logger.info(f"Reconnect failed, session not found: {session_id}")
                     # Session not found, start a new one
                     data["type"] = "start"
 
             if data["type"] == "start":
                 session_id = str(uuid.uuid4())
+                logger.info(f"Starting new session: {session_id}")
                 role_id = data.get("role_id", "software_engineer")
                 difficulty = data.get("difficulty", "Medium")
                 job_description = data.get("job_description")
@@ -67,7 +73,7 @@ async def interview_ws(websocket: WebSocket):
                         role_config["interview_type"]
                     )
                 except Exception as e:
-                    print(f"DB Error creating session: {e}")
+                    logger.error(f"DB Error creating session: {e}")
 
                 # Connect to Gemini
                 genai_session = await session_manager.connect(system_prompt)
@@ -94,6 +100,7 @@ async def interview_ws(websocket: WebSocket):
                 session_data["relay_task"] = relay_task
 
             if not session_data:
+                logger.warning("Session data missing, closing connection")
                 await websocket.close(code=1000)
                 return
 
@@ -103,6 +110,7 @@ async def interview_ws(websocket: WebSocket):
                 try:
                     message = await websocket.receive()
                 except WebSocketDisconnect:
+                    logger.info(f"WebSocket disconnected for session: {session_id}")
                     break
 
                 if "bytes" in message:
@@ -112,6 +120,7 @@ async def interview_ws(websocket: WebSocket):
                 elif "text" in message:
                     data = json.loads(message["text"])
                     if data["type"] == "end":
+                        logger.info(f"Session ended by user: {session_id}")
                         # Mark as completed
                         session_data["completed"] = True
                         
@@ -126,7 +135,7 @@ async def interview_ws(websocket: WebSocket):
                                     overall_score = scorecard.get("overall_score", 0)
                                     await queries.save_scorecard(session_data["db_session_id"], overall_score, scorecard)
                                 except Exception as e:
-                                    print(f"DB Error saving scorecard: {e}")
+                                    logger.error(f"DB Error saving scorecard: {e}")
                             
                             try:
                                 await websocket.send_json({"type": "scorecard", "data": scorecard})
@@ -140,15 +149,17 @@ async def interview_ws(websocket: WebSocket):
     
     except WebSocketDisconnect:
         # Don't delete the session on disconnect to allow reconnection
+        logger.info(f"WebSocket disconnected (handled): {session_id}")
         pass
     except Exception as e:
-        print(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error in session {session_id}: {e}", exc_info=True)
     finally:
         pass
 
 async def relay_gemini_to_browser(session_id: str):
     session_data = session_store.get(session_id)
     if not session_data:
+        logger.error(f"Relay task could not find session: {session_id}")
         return
         
     live_session = session_data["live_session"]
@@ -205,13 +216,14 @@ async def relay_gemini_to_browser(session_id: str):
                 except: pass
                 
     except Exception as e:
-        print(f"Relay error for {session_id}: {e}")
+        logger.error(f"Relay error for {session_id}: {e}", exc_info=True)
     finally:
         # Ensure session is closed
         await genai_session.__aexit__(None, None, None)
         
         session_data = session_store.get(session_id)
         if session_data and not session_data.get("completed"):
+            logger.info(f"Completing session in relay cleanup: {session_id}")
             session_data["completed"] = True
             full_transcript = "\n".join([f"{t['speaker']}: {t['text']}" for t in transcript_history])
             if full_transcript:
@@ -223,9 +235,10 @@ async def relay_gemini_to_browser(session_id: str):
                         overall_score = scorecard.get("overall_score", 0)
                         await queries.save_scorecard(session_data["db_session_id"], overall_score, scorecard)
                     except Exception as e:
-                        print(f"DB Error saving scorecard: {e}")
+                        logger.error(f"DB Error saving scorecard: {e}")
                 
                 try:
                     await session_data["websocket"].send_json({"type": "scorecard", "data": scorecard})
                 except: pass
             session_store.delete(session_id)
+
