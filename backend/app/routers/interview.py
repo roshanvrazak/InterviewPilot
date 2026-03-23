@@ -1,10 +1,12 @@
 # backend/app/routers/interview.py
 import json
 import asyncio
+import uuid
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from google.genai import types
 from app.services.gemini_session import GeminiSessionManager
 from app.services.evaluator import EvaluatorService
+from app.services.session_store import session_store
 from app.utils.prompts import INTERVIEWER_SYSTEM_PROMPT, ROLE_CONFIGS
 
 router = APIRouter()
@@ -14,71 +16,142 @@ evaluator = EvaluatorService()
 @router.websocket("/ws/interview")
 async def interview_ws(websocket: WebSocket):
     await websocket.accept()
-    transcript_history = []
+    session_id = None
+    session_data = None
+    
     try:
-        # Wait for the first message (should be a "start" message)
+        # Wait for the first message (should be "start" or "reconnect")
         message = await websocket.receive()
         if "text" in message:
             data = json.loads(message["text"])
+            
+            if data["type"] == "reconnect":
+                session_id = data.get("session_id")
+                session_data = session_store.get(session_id)
+                if session_data:
+                    # Update the websocket in the relay task if necessary
+                    session_data["websocket"] = websocket
+                else:
+                    # Session not found, start a new one
+                    data["type"] = "start"
+
             if data["type"] == "start":
+                session_id = str(uuid.uuid4())
                 role_id = data.get("role_id", "software_engineer")
                 role_config = ROLE_CONFIGS.get(role_id, ROLE_CONFIGS["software_engineer"])
                 system_prompt = INTERVIEWER_SYSTEM_PROMPT.format(**role_config)
                 
-                # Correctly enter the async context manager
-                async with await session_manager.connect(system_prompt) as session:
-                    # Start the relay task
-                    relay_task = asyncio.create_task(relay_gemini_to_browser(session, websocket, transcript_history))
-                    
-                    # Continue the WebSocket loop for binary audio and additional messages
-                    while True:
-                        try:
-                            message = await websocket.receive()
-                        except WebSocketDisconnect:
-                            break
+                # Connect to Gemini
+                genai_session = await session_manager.connect(system_prompt)
+                live_session = await genai_session.__aenter__()
+                
+                transcript_history = []
+                session_data = {
+                    "session_id": session_id,
+                    "live_session": live_session,
+                    "genai_session": genai_session,
+                    "transcript_history": transcript_history,
+                    "websocket": websocket,
+                    "relay_task": None
+                }
+                session_store.save(session_id, session_data)
+                await websocket.send_json({"type": "session_id", "session_id": session_id})
+                
+                # Start relay task
+                relay_task = asyncio.create_task(relay_gemini_to_browser(session_id))
+                session_data["relay_task"] = relay_task
 
-                        if "bytes" in message:
-                            await session.send_realtime_input(
-                                audio=types.Blob(data=message["bytes"], mime_type="audio/pcm;rate=16000")
-                            )
-                        elif "text" in message:
-                            data = json.loads(message["text"])
-                            if data["type"] == "end":
-                                break
-                    
-                    # Cancel the relay task when the loop ends
-                    relay_task.cancel()
-                    try:
-                        await relay_task
-                    except asyncio.CancelledError:
-                        pass
-                    
-                    # Generate scorecard
-                    full_transcript = "\n".join([f"{t['speaker']}: {t['text']}" for t in transcript_history])
-                    if full_transcript:
-                        scorecard = await evaluator.generate_scorecard(full_transcript)
-                        await websocket.send_json({"type": "scorecard", "data": scorecard})
+            if not session_data:
+                await websocket.close(code=1000)
+                return
 
+            # Main WebSocket loop
+            live_session = session_data["live_session"]
+            while True:
+                try:
+                    message = await websocket.receive()
+                except WebSocketDisconnect:
+                    break
+
+                if "bytes" in message:
+                    await live_session.send_realtime_input(
+                        audio=types.Blob(data=message["bytes"], mime_type="audio/pcm;rate=16000")
+                    )
+                elif "text" in message:
+                    data = json.loads(message["text"])
+                    if data["type"] == "end":
+                        # Cleanup session
+                        session_store.delete(session_id)
+                        break
+    
     except WebSocketDisconnect:
         pass
     except Exception as e:
         print(f"WebSocket error: {e}")
+    finally:
+        pass
 
-async def relay_gemini_to_browser(session, websocket, transcript_history):
-    # session should be the LiveSession object.
-    async for response in session.receive():
-        sc = response.server_content
-        if sc and sc.model_turn:
-            for part in sc.model_turn.parts:
-                if part.inline_data:
-                    await websocket.send_bytes(part.inline_data.data)
-        if sc and sc.output_transcription:
-            text = sc.output_transcription.text
-            transcript_history.append({"speaker": "interviewer", "text": text})
-            await websocket.send_json({"type": "transcript", "speaker": "interviewer", "text": text})
-        if sc and sc.input_transcription:
-            text = sc.input_transcription.text
-            transcript_history.append({"speaker": "candidate", "text": text})
-            await websocket.send_json({"type": "transcript", "speaker": "candidate", "text": text})
-        if sc and sc.turn_complete:
-            await websocket.send_json({"type": "turn_complete"})
+async def relay_gemini_to_browser(session_id: str):
+    session_data = session_store.get(session_id)
+    if not session_data:
+        return
+        
+    live_session = session_data["live_session"]
+    genai_session = session_data["genai_session"]
+    transcript_history = session_data["transcript_history"]
+    
+    try:
+        async for response in live_session.receive():
+            # Refresh session_data to get the latest websocket (might have reconnected)
+            session_data = session_store.get(session_id)
+            if not session_data:
+                # Session was deleted (likely an "end" message)
+                break
+            
+            websocket = session_data["websocket"]
+            sc = response.server_content
+            
+            if sc and sc.model_turn:
+                for part in sc.model_turn.parts:
+                    if part.inline_data:
+                        try:
+                            await websocket.send_bytes(part.inline_data.data)
+                        except: pass # Socket might be closed during reconnection
+            
+            if sc and sc.output_transcription:
+                text = sc.output_transcription.text
+                transcript_history.append({"speaker": "interviewer", "text": text})
+                try:
+                    await websocket.send_json({"type": "transcript", "speaker": "interviewer", "text": text})
+                except: pass
+                
+            if sc and sc.input_transcription:
+                text = sc.input_transcription.text
+                transcript_history.append({"speaker": "candidate", "text": text})
+                try:
+                    await websocket.send_json({"type": "transcript", "speaker": "candidate", "text": text})
+                except: pass
+                
+            if sc and sc.turn_complete:
+                try:
+                    await websocket.send_json({"type": "turn_complete"})
+                except: pass
+                
+    except Exception as e:
+        print(f"Relay error for {session_id}: {e}")
+    finally:
+        # Ensure session is closed
+        await genai_session.__aexit__(None, None, None)
+        
+        # When relay finishes, if it was NOT an explicit deletion (e.g., error or turn end)
+        # we might want to generate scorecard if it's the end of session.
+        # But for now, we follow the simple delete-on-end logic.
+        session_data = session_store.get(session_id)
+        if session_data:
+            full_transcript = "\n".join([f"{t['speaker']}: {t['text']}" for t in transcript_history])
+            if full_transcript:
+                scorecard = await evaluator.generate_scorecard(full_transcript)
+                try:
+                    await session_data["websocket"].send_json({"type": "scorecard", "data": scorecard})
+                except: pass
+            session_store.delete(session_id)
