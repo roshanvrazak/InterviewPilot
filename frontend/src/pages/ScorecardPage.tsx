@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState } from 'react';
 
 interface ScorecardPageProps {
   scorecard: any;
@@ -6,6 +6,36 @@ interface ScorecardPageProps {
 }
 
 export const ScorecardPage: React.FC<ScorecardPageProps> = ({ scorecard, onRestart }) => {
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    setIsDownloading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/export-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scorecard })
+      });
+      
+      if (!response.ok) throw new Error("Failed to generate PDF");
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mock_interview_scorecard.pdf';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download error:", error);
+      alert("Failed to download PDF.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioUrl = useMemo(() => {
     if (scorecard?.audioBlob) {
@@ -118,12 +148,21 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ scorecard, onResta
         </div>
       )}
 
-      <button 
-        onClick={onRestart}
-        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-lg transition-colors shadow-lg shadow-blue-200"
-      >
-        Try Another Mock Interview
-      </button>
+      <div className="flex flex-col sm:flex-row gap-4 mt-8">
+        <button 
+          onClick={handleDownloadPDF}
+          disabled={isDownloading}
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold text-lg transition-colors shadow-lg shadow-green-200 disabled:opacity-50"
+        >
+          {isDownloading ? 'Generating PDF...' : 'Download PDF Report'}
+        </button>
+        <button 
+          onClick={onRestart}
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-lg transition-colors shadow-lg shadow-blue-200"
+        >
+          Try Another Mock Interview
+        </button>
+      </div>
     </div>
   );
 };
