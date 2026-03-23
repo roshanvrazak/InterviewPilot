@@ -1,5 +1,12 @@
 -- backend/app/db/init.sql
 
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS interview_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     role_id VARCHAR(50) NOT NULL,
@@ -10,6 +17,13 @@ CREATE TABLE IF NOT EXISTS interview_sessions (
     duration_seconds INTEGER,
     status VARCHAR(20) DEFAULT 'active'
 );
+
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='interview_sessions' AND column_name='user_id') THEN 
+        ALTER TABLE interview_sessions ADD COLUMN user_id UUID REFERENCES users(id) ON DELETE CASCADE; 
+    END IF; 
+END $$;
 
 CREATE TABLE IF NOT EXISTS transcript_entries (
     id SERIAL PRIMARY KEY,

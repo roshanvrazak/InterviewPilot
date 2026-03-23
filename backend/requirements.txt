@@ -10,3 +10,5 @@ httpx
 pymupdf
 python-docx
 reportlab
+passlib[bcrypt]
+python-jose[cryptography]
