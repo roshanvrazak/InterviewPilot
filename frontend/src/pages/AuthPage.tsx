@@ -18,7 +18,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
     const body = isLogin 
       ? new URLSearchParams({ username, password }) 
-      : JSON.stringify({ username, password });
+      : JSON.stringify({ email: username, password });
     
     const headers: Record<string, string> = {};
     if (!isLogin) {
