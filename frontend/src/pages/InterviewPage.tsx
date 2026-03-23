@@ -1,20 +1,33 @@
 // frontend/src/pages/InterviewPage.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAudioCapture } from '../hooks/useAudioCapture';
 import { useAudioPlayback } from '../hooks/useAudioPlayback';
-import { AudioVisualizer } from '../components/AudioVisualizer';
+import { useMediaRecorder } from '../hooks/useMediaRecorder';
+import { AudioVisualizer, VisualizerState } from '../components/AudioVisualizer';
 
 interface InterviewPageProps {
   roleId: string;
+  difficulty: string;
+  jobDescription: string;
   onScorecard: (data: any) => void;
 }
 
-export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecard }) => {
+export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty, jobDescription, onScorecard }) => {
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'ending'>('idle');
-  const { init: initPlayback, playChunk, stop: stopPlayback, analyser: playbackAnalyser } = useAudioPlayback();
+  const [isInterrupted, setIsInterrupted] = useState(false);
+  const { init: initPlayback, playChunk, stop: stopPlayback, stopAll, analyser: playbackAnalyser } = useAudioPlayback();
+  const { start: startRecording, stop: stopRecording, audioBlob } = useMediaRecorder();
   
+  const [segments, setSegments] = useState<{start: number, end: number}[]>([]);
+  const interviewStartTimeRef = useRef<number>(0);
+  const currentSegmentRef = useRef<{start: number} | null>(null);
+  const scorecardRef = useRef<any>(null);
+  const [hasReportedScorecard, setHasReportedScorecard] = useState(false);
+
+  const lastInterruptionRef = useRef<number>(0);
+
   const onAudio = useCallback((data: ArrayBuffer) => {
     playChunk(data);
   }, [playChunk]);
@@ -23,13 +36,23 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
     if (msg.type === 'transcript') {
       setStatus('active'); // First transcript means we are active
       setTranscripts(prev => [...prev, msg]);
+    } else if (msg.type === 'history') {
+      setTranscripts(msg.history);
+      setStatus('active'); // Restore status as well
     } else if (msg.type === 'scorecard') {
-      onScorecard(msg.data);
+      scorecardRef.current = msg.data;
     }
-  }, [onScorecard, setStatus]);
+  }, [setStatus]);
+
+  useEffect(() => {
+    if (audioBlob && scorecardRef.current && !hasReportedScorecard) {
+      setHasReportedScorecard(true);
+      onScorecard({ ...scorecardRef.current, audioBlob, segments });
+    }
+  }, [audioBlob, segments, onScorecard, hasReportedScorecard]);
 
   const { connect, send, connected } = useWebSocket(onAudio, onJson);
-  const { start: startCapture, stop: stopCapture, analyser: captureAnalyser } = useAudioCapture((audioData) => {
+  const { start: startCapture, stop: stopCapture, analyser: captureAnalyser, stream } = useAudioCapture((audioData) => {
     send(audioData);
   });
 
@@ -42,19 +65,95 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
   const handleEnd = () => {
     if (window.confirm("Are you sure you want to end the interview?")) {
       setStatus('ending');
+      stopRecording();
+      if (currentSegmentRef.current) {
+        const endTime = performance.now() - interviewStartTimeRef.current;
+        setSegments(prev => [...prev, { ...currentSegmentRef.current!, end: endTime }]);
+        currentSegmentRef.current = null;
+      }
       send({ type: 'end' });
     }
   };
 
+  // Recording and segment tracking logic
+  useEffect(() => {
+    if (connected && stream && status === 'connecting') {
+      interviewStartTimeRef.current = performance.now();
+      startRecording(stream);
+    }
+  }, [connected, stream, status, startRecording]);
+
+  // Interruption and segment detection logic
+  useEffect(() => {
+    if (!connected || !captureAnalyser || !playbackAnalyser || status !== 'active') return;
+
+    let animationFrameId: number;
+    const captureData = new Uint8Array(captureAnalyser.frequencyBinCount);
+    const playbackData = new Uint8Array(playbackAnalyser.frequencyBinCount);
+
+    const checkAudioLevels = () => {
+      animationFrameId = requestAnimationFrame(checkAudioLevels);
+      
+      captureAnalyser.getByteFrequencyData(captureData);
+      playbackAnalyser.getByteFrequencyData(playbackData);
+
+      const captureLevel = captureData.reduce((a, b) => a + b, 0) / captureData.length;
+      const playbackLevel = playbackData.reduce((a, b) => a + b, 0) / playbackData.length;
+
+      const now = performance.now() - interviewStartTimeRef.current;
+
+      // Segment tracking: Candidate starts speaking
+      if (captureLevel > 15 && playbackLevel < 5 && !currentSegmentRef.current) {
+        currentSegmentRef.current = { start: now };
+      }
+
+      // Segment tracking: Candidate stops speaking (AI starts)
+      if (playbackLevel > 10 && currentSegmentRef.current) {
+        setSegments(prev => [...prev, { ...currentSegmentRef.current!, end: now }]);
+        currentSegmentRef.current = null;
+      }
+
+      // Interruption logic
+      if (captureLevel > 15 && playbackLevel > 5 && Date.now() - lastInterruptionRef.current > 1000) {
+        lastInterruptionRef.current = Date.now();
+        stopAll();
+        send({ type: 'interrupted' });
+        setIsInterrupted(true);
+        setTimeout(() => setIsInterrupted(false), 1000);
+      }
+    };
+
+    checkAudioLevels();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [connected, captureAnalyser, playbackAnalyser, status, stopAll, send]);
+
   useEffect(() => {
     if (connected) {
-      send({ type: 'start', role_id: roleId });
+      send({ 
+        type: 'start', 
+        role_id: roleId, 
+        difficulty: difficulty,
+        job_description: jobDescription
+      });
       startCapture();
     } else {
       stopCapture();
       stopPlayback();
     }
-  }, [connected, send, startCapture, stopCapture, stopPlayback, roleId]);
+  }, [connected, send, startCapture, stopCapture, stopPlayback, roleId, difficulty, jobDescription]);
+
+  const getAIState = (): VisualizerState => {
+    if (status === 'connecting') return 'Connecting';
+    if (isInterrupted) return 'Interrupted';
+    if (status === 'active') return 'Speaking';
+    return 'Idle';
+  };
+
+  const getUserState = (): VisualizerState => {
+    if (status === 'connecting') return 'Connecting';
+    if (status === 'active') return 'Listening';
+    return 'Idle';
+  };
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -63,11 +162,11 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
       <div className="flex justify-around mb-8 bg-white p-6 rounded-lg shadow-sm">
         <div className="text-center">
           <div className="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">You</div>
-          <AudioVisualizer analyser={captureAnalyser} color="#10b981" />
+          <AudioVisualizer analyser={captureAnalyser} state={getUserState()} color="#10b981" />
         </div>
         <div className="text-center">
           <div className="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">Alex (AI)</div>
-          <AudioVisualizer analyser={playbackAnalyser} color="#3b82f6" />
+          <AudioVisualizer analyser={playbackAnalyser} state={getAIState()} color="#3b82f6" />
         </div>
       </div>
 

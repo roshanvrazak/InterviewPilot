@@ -13,21 +13,32 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   backend:
-    build: ./backend
-    environment:
-      - DATABASE_URL=postgresql://interviewer:password@db/mock_interviewer
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
     ports:
-      - "80:80"
+      - "3000:80"
     depends_on:
       - backend
+
+volumes:
+  postgres_data:
