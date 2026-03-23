@@ -3,7 +3,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
-from app.routers import interview, jd_processor, pdf_export, auth
+from app.routers import interview, jd_processor, pdf_export, auth, dashboard
 from app.routers.interview import session_manager
 from app.services.session_store import session_store
 from app.db.connection import db_manager
@@ -62,6 +62,7 @@ app.include_router(interview.router)
 app.include_router(jd_processor.router)
 app.include_router(pdf_export.router)
 app.include_router(auth.router)
+app.include_router(dashboard.router)
 
 @app.get("/")
 async def root():

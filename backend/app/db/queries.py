@@ -2,16 +2,16 @@
 import json
 from app.db.connection import db_manager
 
-async def create_session(role_id: str, role_name: str, interview_type: str):
+async def create_session(role_id: str, role_name: str, interview_type: str, user_id: str = None):
     pool = await db_manager.connect()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             """
-            INSERT INTO interview_sessions (role_id, role_name, interview_type)
-            VALUES ($1, $2, $3)
+            INSERT INTO interview_sessions (role_id, role_name, interview_type, user_id)
+            VALUES ($1, $2, $3, $4)
             RETURNING id
             """,
-            role_id, role_name, interview_type
+            role_id, role_name, interview_type, user_id
         )
         return row['id']
 

@@ -4,6 +4,7 @@ import asyncio
 import uuid
 import time
 import logging
+from jose import jwt
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from google.genai import types
 from app.services.gemini_session import GeminiSessionManager
@@ -12,6 +13,7 @@ from app.services.session_store import session_store
 from app.config import settings
 from app.utils.prompts import INTERVIEWER_SYSTEM_PROMPT, ROLE_CONFIGS, DIFFICULTY_CONFIGS
 from app.db import queries
+from app.services.auth import SECRET_KEY, ALGORITHM
 
 router = APIRouter()
 session_manager = GeminiSessionManager()
@@ -58,6 +60,15 @@ async def interview_ws(websocket: WebSocket):
                 role_id = data.get("role_id", "software_engineer")
                 difficulty = data.get("difficulty", "Medium")
                 job_description = data.get("job_description")
+                token = data.get("token")
+                
+                user_id = None
+                if token:
+                    try:
+                        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                        user_id = payload.get("sub")
+                    except jwt.JWTError:
+                        logger.warning("Invalid or expired token received for WebSocket connection.")
                 
                 role_config = ROLE_CONFIGS.get(role_id, ROLE_CONFIGS["software_engineer"])
                 diff_config = DIFFICULTY_CONFIGS.get(difficulty, DIFFICULTY_CONFIGS["Medium"])
@@ -74,7 +85,8 @@ async def interview_ws(websocket: WebSocket):
                     db_session_id = await queries.create_session(
                         role_id, 
                         role_config["role_name"], 
-                        role_config["interview_type"]
+                        role_config["interview_type"],
+                        user_id
                     )
                 except Exception as e:
                     logger.error(f"DB Error creating session: {e}")
