@@ -1,18 +1,26 @@
 // frontend/src/hooks/useAudioPlayback.ts
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 
 export function useAudioPlayback() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
   const init = useCallback(() => {
-    audioContextRef.current = new AudioContext({ sampleRate: 24000 });
+    const ctx = new AudioContext({ sampleRate: 24000 });
+    audioContextRef.current = ctx;
+    
+    const analyserNode = ctx.createAnalyser();
+    analyserNode.fftSize = 256;
+    analyserNode.connect(ctx.destination);
+    setAnalyser(analyserNode);
+
     nextStartTimeRef.current = 0;
   }, []);
 
   const playChunk = useCallback((pcmData: ArrayBuffer) => {
     const ctx = audioContextRef.current;
-    if (!ctx) return;
+    if (!ctx || !analyser) return;
 
     const int16 = new Int16Array(pcmData);
     const float32 = new Float32Array(int16.length);
@@ -25,19 +33,20 @@ export function useAudioPlayback() {
 
     const source = ctx.createBufferSource();
     source.buffer = buffer;
-    source.connect(ctx.destination);
+    source.connect(analyser);
 
     const currentTime = ctx.currentTime;
     const startTime = Math.max(currentTime, nextStartTimeRef.current);
     source.start(startTime);
     nextStartTimeRef.current = startTime + buffer.duration;
-  }, []);
+  }, [analyser]);
 
   const stop = useCallback(() => {
     audioContextRef.current?.close();
     audioContextRef.current = null;
+    setAnalyser(null);
     nextStartTimeRef.current = 0;
   }, []);
 
-  return { init, playChunk, stop };
+  return { init, playChunk, stop, analyser };
 }
