@@ -12,6 +12,7 @@ interface InterviewPageProps {
 
 export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecard }) => {
   const [transcripts, setTranscripts] = useState<any[]>([]);
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'ending'>('idle');
   const { init: initPlayback, playChunk, stop: stopPlayback, analyser: playbackAnalyser } = useAudioPlayback();
   
   const onAudio = useCallback((data: ArrayBuffer) => {
@@ -20,11 +21,12 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
 
   const onJson = useCallback((msg: any) => {
     if (msg.type === 'transcript') {
+      setStatus('active'); // First transcript means we are active
       setTranscripts(prev => [...prev, msg]);
     } else if (msg.type === 'scorecard') {
       onScorecard(msg.data);
     }
-  }, [onScorecard]);
+  }, [onScorecard, setStatus]);
 
   const { connect, send, connected } = useWebSocket(onAudio, onJson);
   const { start: startCapture, stop: stopCapture, analyser: captureAnalyser } = useAudioCapture((audioData) => {
@@ -32,8 +34,16 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
   });
 
   const handleStart = () => {
+    setStatus('connecting');
     initPlayback();
     connect('ws://localhost:8000/ws/interview');
+  };
+
+  const handleEnd = () => {
+    if (window.confirm("Are you sure you want to end the interview?")) {
+      setStatus('ending');
+      send({ type: 'end' });
+    }
   };
 
   useEffect(() => {
@@ -62,7 +72,7 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
       </div>
 
       <div className="mb-6 flex justify-center">
-        {!connected ? (
+        {status === 'idle' ? (
           <button 
             onClick={handleStart} 
             className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full transition duration-300 shadow-md"
@@ -70,12 +80,19 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, onScorecar
             Start Interview
           </button>
         ) : (
-          <button 
-            onClick={() => send({ type: 'end' })} 
-            className="bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-8 rounded-full transition duration-300 shadow-md"
-          >
-            End Interview
-          </button>
+          <div className="flex items-center justify-between mb-8 w-full max-w-2xl">
+            <div className="flex items-center space-x-2">
+              <div className={`w-3 h-3 rounded-full ${status === 'active' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span className="text-sm font-medium text-gray-600 uppercase tracking-wider">{status}</span>
+            </div>
+            <button 
+              onClick={handleEnd} 
+              disabled={status === 'ending'}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full font-bold transition-colors disabled:opacity-50"
+            >
+              {status === 'ending' ? 'Generating Scorecard...' : 'End Interview'}
+            </button>
+          </div>
         )}
       </div>
 
