@@ -1,4 +1,3 @@
-// frontend/src/components/JDInput.tsx
 import React, { useState } from 'react';
 
 interface JDInputProps {
@@ -34,30 +33,57 @@ export const JDInput: React.FC<JDInputProps> = ({ onJDChange }) => {
   };
 
   return (
-    <div className="mb-8 bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
-      <h3 className="text-lg font-bold mb-4 text-slate-800 dark:text-white">Job Description (Optional)</h3>
-      <textarea
-        className="w-full h-32 p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 transition-all outline-none"
-        placeholder="Paste the job description here for a tailored interview..."
-        value={pastedJD}
-        onChange={(e) => {
-          setPastedJD(e.target.value);
-          onJDChange(e.target.value);
-        }}
-      />
-      <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-600">
-        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Or upload a PDF/Docx</span>
-        <input
-          type="file"
-          accept=".pdf,.docx"
-          onChange={handleFileUpload}
-          disabled={loading}
-          className="text-xs text-blue-600 dark:text-blue-400 cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-300"
-        />
+    <div className="surface-elevated rounded-2xl p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <label className="text-[13px] font-semibold tracking-wide" style={{ color: 'var(--text-muted)' }}>
+          JOB DESCRIPTION
+        </label>
+        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
+          Optional
+        </span>
       </div>
+
+      <textarea
+        className="w-full h-28 p-3.5 rounded-xl text-[14px] outline-none transition-all duration-200 mb-3 resize-none"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1.5px solid var(--border-primary)',
+          color: 'var(--text-primary)',
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = 'var(--accent-primary)';
+          e.currentTarget.style.boxShadow = '0 0 0 3px var(--accent-glow)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = 'var(--border-primary)';
+          e.currentTarget.style.boxShadow = 'none';
+        }}
+        placeholder="Paste the job description here for tailored questions..."
+        value={pastedJD}
+        onChange={(e) => { setPastedJD(e.target.value); onJDChange(e.target.value); }}
+      />
+
+      <div
+        className="flex items-center justify-between p-3 rounded-xl"
+        style={{ backgroundColor: 'var(--bg-secondary)', border: '1.5px dashed var(--border-primary)' }}
+      >
+        <span className="text-[12px] font-medium" style={{ color: 'var(--text-muted)' }}>
+          Or upload a PDF / DOCX
+        </span>
+        <label
+          className="text-[12px] font-semibold px-3.5 py-1.5 rounded-lg cursor-pointer transition-all"
+          style={{ backgroundColor: 'var(--accent-surface)', color: 'var(--accent-primary)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--accent-primary)'; e.currentTarget.style.color = '#fff'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--accent-surface)'; e.currentTarget.style.color = 'var(--accent-primary)'; }}
+        >
+          Choose File
+          <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} disabled={loading} className="hidden" />
+        </label>
+      </div>
+
       {loading && (
-        <div className="flex items-center gap-2 text-xs text-blue-500 dark:text-blue-400 mt-3 animate-pulse">
-          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+        <div className="flex items-center gap-2 text-[12px] mt-2.5 animate-fade-in" style={{ color: 'var(--accent-primary)' }}>
+          <div className="w-3 h-3 rounded-full animate-spin" style={{ border: '2px solid var(--accent-surface)', borderTopColor: 'var(--accent-primary)' }} />
           Parsing file...
         </div>
       )}

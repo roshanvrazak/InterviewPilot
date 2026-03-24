@@ -10,16 +10,18 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-    const body = isLogin 
-      ? new URLSearchParams({ username, password }) 
+    const body = isLogin
+      ? new URLSearchParams({ username, password })
       : JSON.stringify({ email: username, password });
-    
+
     const headers: Record<string, string> = {};
     if (!isLogin) {
         headers['Content-Type'] = 'application/json';
@@ -49,61 +51,100 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
       }
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center h-[calc(100vh-64px)] bg-slate-50 dark:bg-slate-950 px-4">
-      <div className="bg-white dark:bg-slate-900 p-10 rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 w-full max-w-md">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-2">{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">{isLogin ? 'Sign in to continue your interview prep' : 'Get started with your personalized AI interviewer'}</p>
+    <div className="flex items-center justify-center min-h-[calc(100dvh-3.5rem)] px-4">
+      <div className="surface-elevated w-full max-w-sm rounded-2xl p-6 sm:p-8 animate-fade-in-up">
+        <div className="text-center mb-6 animate-fade-in-up delay-1">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+            {isLogin ? 'Welcome back' : 'Create account'}
+          </h2>
+          <p className="mt-1.5 text-[13px]" style={{ color: 'var(--text-secondary)' }}>
+            {isLogin ? 'Sign in to continue' : 'Get started with AI interview prep'}
+          </p>
         </div>
-        
+
         {error && (
-          <div className={`mb-6 p-4 rounded-xl text-sm font-medium ${error.includes('successful') ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'}`}>
+          <div
+            className="mb-5 px-3.5 py-2.5 rounded-xl text-[13px] font-medium animate-fade-in"
+            style={{
+              backgroundColor: error.includes('successful') ? 'var(--success-surface)' : 'var(--danger-surface)',
+              color: error.includes('successful') ? 'var(--success)' : 'var(--danger)',
+            }}
+            role="alert"
+          >
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2 ml-1">Username or Email</label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="animate-fade-in-up delay-2">
+            <label htmlFor="auth-username" className="block text-[12px] font-semibold mb-1.5 tracking-wide" style={{ color: 'var(--text-muted)' }}>
+              EMAIL
+            </label>
             <input
+              id="auth-username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-slate-400"
+              placeholder="you@example.com"
+              autoComplete="username"
+              className="w-full px-3.5 py-2.5 rounded-xl outline-none transition-all text-[14px]"
+              style={{ backgroundColor: 'var(--bg-secondary)', border: '1.5px solid var(--border-primary)', color: 'var(--text-primary)' }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--accent-glow)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.boxShadow = 'none'; }}
               required
             />
           </div>
-          <div>
-            <label className="block text-slate-700 dark:text-slate-300 text-sm font-bold mb-2 ml-1">Password</label>
+
+          <div className="animate-fade-in-up delay-3">
+            <label htmlFor="auth-password" className="block text-[12px] font-semibold mb-1.5 tracking-wide" style={{ color: 'var(--text-muted)' }}>
+              PASSWORD
+            </label>
             <input
+              id="auth-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-slate-400"
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
+              className="w-full px-3.5 py-2.5 rounded-xl outline-none transition-all text-[14px]"
+              style={{ backgroundColor: 'var(--bg-secondary)', border: '1.5px solid var(--border-primary)', color: 'var(--text-primary)' }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--accent-glow)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.boxShadow = 'none'; }}
               required
             />
           </div>
-          
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
-          >
-            {isLogin ? 'Sign In' : 'Sign Up'}
-          </button>
 
-          <div className="pt-4 text-center">
+          <div className="animate-fade-in-up delay-4 pt-1">
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-3 text-[14px] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading && (
+                <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} aria-hidden="true" />
+              )}
+              {isLogin ? 'Sign in' : 'Create account'}
+            </button>
+          </div>
+
+          <div className="text-center animate-fade-in-up delay-5">
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+              className="text-[13px] font-medium transition-colors cursor-pointer min-h-[44px] inline-flex items-center"
+              style={{ color: 'var(--text-muted)' }}
             >
-              {isLogin ? "Don't have an account? Create one" : 'Already have an account? Sign In'}
+              {isLogin ? (
+                <>No account? <span className="ml-1 font-semibold" style={{ color: 'var(--accent-primary)' }}>Sign up</span></>
+              ) : (
+                <>Have an account? <span className="ml-1 font-semibold" style={{ color: 'var(--accent-primary)' }}>Sign in</span></>
+              )}
             </button>
           </div>
         </form>

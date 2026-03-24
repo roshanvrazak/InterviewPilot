@@ -3,10 +3,10 @@ import { RoleCard } from '../components/RoleCard';
 import { JDInput } from '../components/JDInput';
 
 const roles = [
-  { id: 'software_engineer', name: 'Software Engineer', description: 'General technical interview focusing on coding and system design.', type: 'Mixed' },
-  { id: 'frontend_developer', name: 'Frontend Developer', description: 'Interview focusing on React, CSS, and web performance.', type: 'Technical' },
-  { id: 'product_manager', name: 'Product Manager', description: 'Interview focusing on product strategy and execution.', type: 'Behavioral' },
-  { id: 'devops_engineer', name: 'DevOps Engineer', description: 'Interview focusing on infrastructure and automation.', type: 'Technical' }
+  { id: 'software_engineer', name: 'Software Engineer', description: 'General technical interview focusing on coding and system design.', type: 'Mixed', icon: '01' },
+  { id: 'frontend_developer', name: 'Frontend Developer', description: 'Interview focusing on React, CSS, and web performance.', type: 'Technical', icon: '02' },
+  { id: 'product_manager', name: 'Product Manager', description: 'Interview focusing on product strategy and execution.', type: 'Behavioral', icon: '03' },
+  { id: 'devops_engineer', name: 'DevOps Engineer', description: 'Interview focusing on infrastructure and automation.', type: 'Technical', icon: '04' }
 ];
 
 const difficulties = ['Easy', 'Medium', 'Hard'];
@@ -29,78 +29,109 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectRole, selectedVoice,
   const [jobDescription, setJobDescription] = useState('');
 
   return (
-    <div className="max-w-4xl mx-auto py-16 px-6">
-      <div className="text-center mb-16">
-        <h1 className="text-5xl font-extrabold mb-4 text-slate-900 dark:text-white tracking-tight">AI Mock Interviewer</h1>
-        <p className="text-slate-500 dark:text-slate-400 text-lg max-w-2xl mx-auto">Prepare for your next career move with personalized, AI-driven mock interviews.</p>
+    <div>
+      {/* Hero */}
+      <div className="pt-16 sm:pt-20 md:pt-28 pb-12 sm:pb-16 px-4 sm:px-6 max-w-3xl mx-auto text-center">
+        <div className="animate-fade-in-up">
+          <span
+            className="badge mb-5"
+            style={{ backgroundColor: 'var(--accent-surface)', color: 'var(--accent-primary)' }}
+          >
+            AI-Powered Interview Prep
+          </span>
+        </div>
+
+        <h1
+          className="text-[2rem] sm:text-[2.75rem] md:text-[3.25rem] font-extrabold tracking-tight leading-[1.1] mb-4 animate-fade-in-up delay-1"
+          style={{ color: 'var(--text-primary)' }}
+        >
+          Ace your next{' '}
+          <span className="text-gradient">interview</span>
+        </h1>
+
+        <p
+          className="text-[15px] sm:text-base max-w-lg mx-auto animate-fade-in-up delay-2 leading-relaxed"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          Practice with an AI interviewer that adapts to your role, difficulty, and job description.
+        </p>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-16">
-        <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-3xl border border-slate-100 dark:border-slate-700">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-            Difficulty Level
-          </p>
-          <div className="grid grid-cols-3 gap-2 bg-slate-200/50 dark:bg-slate-900/50 p-1.5 rounded-2xl">
-            {difficulties.map((diff) => (
-              <button
-                key={diff}
-                type="button"
-                onClick={() => setDifficulty(diff)}
-                className={`py-2.5 text-sm font-bold rounded-xl transition-all ${
-                  difficulty === diff
-                    ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                }`}
-              >
-                {diff}
-              </button>
-            ))}
+
+      {/* Config Section */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 animate-fade-in-up delay-3">
+          {/* Difficulty */}
+          <div className="surface-elevated rounded-2xl p-5">
+            <label className="text-[13px] font-semibold mb-3 block tracking-wide" style={{ color: 'var(--text-muted)' }}>
+              DIFFICULTY
+            </label>
+            <div className="flex rounded-xl p-1 gap-1" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              {difficulties.map((diff) => (
+                <button
+                  key={diff}
+                  onClick={() => setDifficulty(diff)}
+                  className="flex-1 py-2 text-[13px] font-semibold rounded-lg transition-all cursor-pointer min-h-[40px]"
+                  style={
+                    difficulty === diff
+                      ? { backgroundColor: 'var(--accent-primary)', color: '#fff', boxShadow: '0 2px 8px var(--accent-glow)' }
+                      : { color: 'var(--text-muted)', backgroundColor: 'transparent' }
+                  }
+                  aria-pressed={difficulty === diff}
+                >
+                  {diff}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Voice */}
+          <div className="surface-elevated rounded-2xl p-5">
+            <label className="text-[13px] font-semibold mb-3 block tracking-wide" style={{ color: 'var(--text-muted)' }}>
+              INTERVIEWER VOICE
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {voices.map((voice) => (
+                <button
+                  key={voice.id}
+                  onClick={() => setSelectedVoice(voice.id)}
+                  className="text-left rounded-xl px-3 py-2.5 transition-all cursor-pointer min-h-[44px]"
+                  style={
+                    selectedVoice === voice.id
+                      ? { backgroundColor: 'var(--accent-surface)', border: '1.5px solid var(--accent-primary)' }
+                      : { backgroundColor: 'var(--bg-secondary)', border: '1.5px solid transparent' }
+                  }
+                  aria-pressed={selectedVoice === voice.id}
+                >
+                  <div className="font-semibold text-[13px]" style={{ color: selectedVoice === voice.id ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                    {voice.name}
+                  </div>
+                  <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    {voice.description}
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="bg-slate-50 dark:bg-slate-800/50 p-8 rounded-3xl border border-slate-100 dark:border-slate-700">
-          <p className="text-sm font-semibold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
-            Interviewer Voice
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            {voices.map((voice) => (
-              <button
-                key={voice.id}
-                type="button"
-                onClick={() => setSelectedVoice(voice.id)}
-                className={`px-4 py-3 text-left border rounded-2xl transition-all ${
-                  selectedVoice === voice.id
-                    ? 'bg-white dark:bg-slate-700 border-blue-500 dark:border-blue-400 shadow-md ring-1 ring-blue-500 dark:ring-blue-400'
-                    : 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-800'
-                }`}
-              >
-                <div className={`font-bold text-sm ${selectedVoice === voice.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-200'}`}>{voice.name}</div>
-                <div className={`text-[10px] leading-tight ${selectedVoice === voice.id ? 'text-blue-500/70 dark:text-blue-300/70' : 'text-slate-400'}`}>
-                  {voice.description}
-                </div>
-              </button>
+        {/* JD Input */}
+        <div className="mb-10 animate-fade-in-up delay-4">
+          <JDInput onJDChange={setJobDescription} />
+        </div>
+
+        {/* Role Selection */}
+        <div className="mb-16 sm:mb-24 animate-fade-in-up delay-5">
+          <div className="flex items-center gap-4 mb-5">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
+              Choose a role
+            </h2>
+            <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-primary)' }} />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {roles.map(role => (
+              <RoleCard key={role.id} {...role} onSelect={(id) => onSelectRole(id, difficulty, jobDescription)} />
             ))}
           </div>
-        </div>
-      </div>
-
-      <JDInput onJDChange={setJobDescription} />
-
-      <div className="mt-16">
-        <div className="flex items-center gap-4 mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Select Your Role</h2>
-          <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800"></div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {roles.map(role => (
-            <RoleCard 
-              key={role.id} 
-              {...role} 
-              onSelect={(id) => onSelectRole(id, difficulty, jobDescription)} 
-            />
-          ))}
         </div>
       </div>
     </div>
