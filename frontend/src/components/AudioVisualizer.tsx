@@ -1,15 +1,16 @@
 // frontend/src/components/AudioVisualizer.tsx
 import React, { useEffect, useRef, useState } from 'react';
 
-export type VisualizerState = 'Speaking' | 'Listening' | 'Interrupted' | 'Connecting' | 'Idle';
+export type VisualizerState = 'Speaking' | 'Listening' | 'Interrupted' | 'Connecting' | 'Idle' | 'Thinking';
 
 interface AudioVisualizerProps {
   analyser: AnalyserNode | null;
   state?: VisualizerState;
   color?: string; // Optional override
+  size?: number;
 }
 
-export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, state = 'Idle', color }) => {
+export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, state = 'Idle', color, size = 180 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isInterrupted, setIsInterrupted] = useState(false);
 
@@ -31,21 +32,29 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, stat
     let animationFrameId: number;
     const startTime = Date.now();
 
-    const SIZE = 180;
-    const CENTER_X = SIZE / 2;
-    const CENTER_Y = SIZE / 2;
-    const BASE_RADIUS = 50;
-    const MAX_SPIKE = 28;
+    const CANVAS_SIZE = size;
+    const CENTER_X = CANVAS_SIZE / 2;
+    const CENTER_Y = CANVAS_SIZE / 2;
+    const BASE_RADIUS = CANVAS_SIZE * 0.28;
+    const MAX_SPIKE = CANVAS_SIZE * 0.15;
 
-    const getColors = (): { primary: string; glow: string } => {
+    const getColors = (elapsed: number): { primary: string; glow: string } => {
       if (color) return { primary: color, glow: color };
 
       const isDark = document.documentElement.classList.contains('dark');
 
+      if (state === 'Thinking') {
+        const hue = (elapsed * 60) % 360;
+        return {
+          primary: `hsla(${hue}, 80%, 60%, 1)`,
+          glow: `hsla(${hue}, 80%, 60%, 0.5)`,
+        };
+      }
+
       if (isInterrupted) {
         return {
           primary: isDark ? '#FBBF24' : '#D97706',
-          glow: isDark ? 'rgba(251, 191, 36, 0.3)' : 'rgba(217, 119, 6, 0.25)',
+          glow: isDark ? 'rgba(251, 191, 36, 0.4)' : 'rgba(217, 119, 6, 0.3)',
         };
       }
 
@@ -53,27 +62,27 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, stat
         case 'Speaking':
           return {
             primary: isDark ? '#FF6B2C' : '#FF5701',
-            glow: isDark ? 'rgba(255, 107, 44, 0.35)' : 'rgba(255, 87, 1, 0.25)',
+            glow: isDark ? 'rgba(255, 107, 44, 0.5)' : 'rgba(255, 87, 1, 0.4)',
           };
         case 'Listening':
           return {
             primary: isDark ? '#34D399' : '#10B981',
-            glow: isDark ? 'rgba(52, 211, 153, 0.35)' : 'rgba(16, 185, 129, 0.25)',
+            glow: isDark ? 'rgba(52, 211, 153, 0.5)' : 'rgba(16, 185, 129, 0.4)',
           };
         case 'Connecting':
           return {
             primary: '#6B7280',
-            glow: 'rgba(107, 114, 128, 0.2)',
+            glow: 'rgba(107, 114, 128, 0.3)',
           };
         case 'Interrupted':
           return {
             primary: isDark ? '#FBBF24' : '#D97706',
-            glow: isDark ? 'rgba(251, 191, 36, 0.3)' : 'rgba(217, 119, 6, 0.25)',
+            glow: isDark ? 'rgba(251, 191, 36, 0.4)' : 'rgba(217, 119, 6, 0.3)',
           };
         default:
           return {
             primary: isDark ? '#FF7A3D' : '#FF5701',
-            glow: isDark ? 'rgba(255, 122, 61, 0.2)' : 'rgba(255, 87, 1, 0.15)',
+            glow: isDark ? 'rgba(255, 122, 61, 0.3)' : 'rgba(255, 87, 1, 0.2)',
           };
       }
     };
@@ -87,9 +96,9 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, stat
         analyser.getByteFrequencyData(dataArray);
       }
 
-      ctx.clearRect(0, 0, SIZE, SIZE);
+      ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      const { primary, glow } = getColors();
+      const { primary, glow } = getColors(elapsed);
 
       // Global alpha for connecting pulse
       let globalAlpha = 1.0;
@@ -98,6 +107,28 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, stat
       }
 
       const hasData = analyser && dataArray.length > 0 && dataArray.some((v) => v > 5);
+      const avgValue = hasData ? dataArray.reduce((a, b) => a + b, 0) / dataArray.length / 255 : 0;
+
+      // -- Spatial Aura / Nebula layer --
+      ctx.save();
+      const ringCount = 4;
+      for (let i = 0; i < ringCount; i++) {
+        ctx.beginPath();
+        const blur = 15 + i * 12 + (hasData ? avgValue * 30 : 0);
+        const scale = 0.8 + i * 0.25 + (hasData ? avgValue * 0.2 : 0);
+        const alpha = (0.2 / (i + 1)) * globalAlpha;
+        
+        ctx.shadowBlur = blur;
+        ctx.shadowColor = glow;
+        ctx.strokeStyle = primary;
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = 4;
+
+        const r = BASE_RADIUS * scale + Math.sin(elapsed * 1.5 + i) * 8;
+        ctx.arc(CENTER_X, CENTER_Y, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
 
       if (hasData) {
         // -- Glow layer --
@@ -142,26 +173,26 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, stat
         ctx.restore();
       } else {
         // -- Idle: subtle pulsing circle outline --
-        const pulseScale = 1 + 0.03 * Math.sin(elapsed * 1.5);
-        const pulseAlpha = 0.25 + 0.1 * Math.sin(elapsed * 1.5);
+        const pulseScale = 1 + 0.04 * Math.sin(elapsed * 1.2);
+        const pulseAlpha = 0.3 + 0.15 * Math.sin(elapsed * 1.2);
 
         ctx.save();
         ctx.globalAlpha = (state === 'Connecting' ? globalAlpha : 1) * pulseAlpha;
         ctx.strokeStyle = primary;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(CENTER_X, CENTER_Y, BASE_RADIUS * pulseScale, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
 
         // Second ring for depth
-        const pulseScale2 = 1 + 0.05 * Math.sin(elapsed * 1.5 + 1);
+        const pulseScale2 = 1 + 0.06 * Math.sin(elapsed * 1.2 + 1);
         ctx.save();
-        ctx.globalAlpha = (state === 'Connecting' ? globalAlpha : 1) * pulseAlpha * 0.4;
+        ctx.globalAlpha = (state === 'Connecting' ? globalAlpha : 1) * pulseAlpha * 0.5;
         ctx.strokeStyle = primary;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(CENTER_X, CENTER_Y, (BASE_RADIUS + 10) * pulseScale2, 0, Math.PI * 2);
+        ctx.arc(CENTER_X, CENTER_Y, (BASE_RADIUS + 15) * pulseScale2, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }
@@ -172,9 +203,9 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, stat
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [analyser, color, state, isInterrupted]);
+  }, [analyser, color, state, isInterrupted, size]);
 
-  return <canvas ref={canvasRef} width={180} height={180} className="rounded" />;
+  return <canvas ref={canvasRef} width={size} height={size} className="rounded-full" />;
 };
 
 /**
