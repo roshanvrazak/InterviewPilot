@@ -18,5 +18,6 @@ build/
 
 # OS
 .DS_Store
-docs/
-*.md
+# docs/ - allow superpowers docs
+!docs/superpowers/
+!*.md
