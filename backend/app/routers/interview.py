@@ -163,6 +163,7 @@ async def interview_ws(websocket: WebSocket):
                         pass
                     elif data["type"] == "client_turn_complete":
                         logger.info(f"Frontend sent 'client_turn_complete' for session: {session_id}")
+                        session_data["last_turn_complete_time"] = time.time()
                         try:
                             await session_data["live_session"].send(input={"parts": []}, end_of_turn=True)
                         except Exception as e:
@@ -213,6 +214,13 @@ async def relay_gemini_to_browser(session_id: str):
                 if sc and sc.model_turn:
                     for part in sc.model_turn.parts:
                         if part.inline_data:
+                            # Log latency for the first chunk of a turn
+                            last_tc = session_data.get("last_turn_complete_time")
+                            if last_tc:
+                                latency = (time.time() - last_tc) * 1000
+                                logger.info(f"AI response latency: {latency:.2f}ms")
+                                session_data["last_turn_complete_time"] = None # Reset so we only log once per turn
+
                             if websocket:
                                 try:
                                     await websocket.send_bytes(part.inline_data.data)

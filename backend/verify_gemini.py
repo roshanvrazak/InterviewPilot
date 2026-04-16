@@ -17,7 +17,7 @@ async def verify():
     try:
         print("\nAvailable Models:")
         for model in client.models.list():
-            print(f"- {model.name} (Supported actions: {model.supported_generation_methods})")
+            print(f"- {model.name}")
     except Exception as e:
         print(f"❌ Error listing models: {e}")
 

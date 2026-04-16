@@ -11,8 +11,8 @@ class GeminiSessionManager:
         masked_key = f"{key[:4]}...{key[-4:]}" if key else "MISSING"
         logger.info(f"Initializing GeminiSessionManager with API key: {masked_key}")
         self.client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-        # Use verified native audio model
-        self.model = "gemini-2.5-flash-native-audio-preview-12-2025"
+        # Use stable gemini-2.0-flash for better performance and reliability
+        self.model = "gemini-2.0-flash"
 
     async def connect(self, system_prompt: str, voice_name: str = "Kore"):
         config = types.LiveConnectConfig(

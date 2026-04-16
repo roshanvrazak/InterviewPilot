@@ -6,8 +6,8 @@ class PCMProcessor extends AudioWorkletProcessor {
     this.outputSampleRate = 16000;
     this.ratio = this.inputSampleRate / this.outputSampleRate;
     
-    // Buffer for ~100ms of audio at 16kHz
-    this.bufferSize = 2048;
+    // Buffer for ~32ms of audio at 16kHz (reduced from 2048 for lower latency)
+    this.bufferSize = 512;
     this.buffer = new Int16Array(this.bufferSize);
     this.bufferOffset = 0;
   }
