@@ -18,6 +18,7 @@ build/
 
 # OS
 .DS_Store
+.worktrees/
 # docs/ - allow superpowers docs
 !docs/superpowers/
 !*.md
