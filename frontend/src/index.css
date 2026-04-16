@@ -34,33 +34,20 @@
 }
 
 .dark {
-  --bg-primary: #09090B;
-  --bg-secondary: #18181B;
-  --bg-surface: #18181B;
-  --bg-surface-hover: #27272A;
-  --bg-elevated: #1C1C1F;
-  --border-primary: #27272A;
-  --border-subtle: #1E1E21;
+  --bg-primary: #000000;
+  --bg-secondary: #050505;
+  --bg-surface: #0A0A0A;
+  --bg-surface-hover: #111111;
+  --bg-elevated: #161616;
+  --border-primary: #222222;
+  --border-subtle: #161616;
   --text-primary: #FAFAFA;
   --text-secondary: #A1A1AA;
-  --text-muted: #71717A;
-  --accent-primary: #FF6B2C;
-  --accent-primary-hover: #FF8F5A;
-  --accent-secondary: #FB923C;
-  --accent-glow: rgba(255, 107, 44, 0.15);
-  --accent-surface: rgba(255, 107, 44, 0.08);
-  --success: #34D399;
-  --success-surface: rgba(52, 211, 153, 0.1);
-  --danger: #F87171;
-  --danger-surface: rgba(248, 113, 113, 0.1);
-  --warning: #FBBF24;
-  --warning-surface: rgba(251, 191, 36, 0.08);
-  --shadow-color: 0 0 0;
-  --glass-bg: rgba(9, 9, 11, 0.8);
-  --glass-border: rgba(39, 39, 42, 0.5);
-  --card-bg: #18181B;
-  --card-border: #27272A;
-  --nav-bg: rgba(9, 9, 11, 0.85);
+  --text-muted: #52525B;
+  /* Keep accents but refine shadows */
+  --accent-glow: rgba(255, 87, 1, 0.15);
+  --glass-bg: rgba(0, 0, 0, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 /* ─── Base ─── */
@@ -166,6 +153,12 @@ select:focus-visible {
 .delay-5 { animation-delay: 0.3s; opacity: 0; }
 
 /* ─── Utility Classes ─── */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+}
+
 .glass {
   background: var(--nav-bg);
   backdrop-filter: blur(20px) saturate(180%);
