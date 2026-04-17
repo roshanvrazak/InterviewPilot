@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { MessageSquare, Layout } from 'lucide-react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAudioCapture } from '../hooks/useAudioCapture';
 import { useAudioPlayback } from '../hooks/useAudioPlayback';
 import { useMediaRecorder } from '../hooks/useMediaRecorder';
 import { AudioVisualizer, VisualizerState } from '../components/AudioVisualizer';
+import { ControlDock } from '../components/ControlDock';
+import { TranscriptDrawer } from '../components/TranscriptDrawer';
 import { useAuth } from '../context/AuthContext';
 
 interface InterviewPageProps {
@@ -19,8 +22,10 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'ending'>('idle');
   const [isMuted, setIsMuted] = useState(false);
-  const [isInterrupted, setIsInterrupted] = useState(false);
-  const { init: initPlayback, playChunk, stop: stopPlayback, stopAll, analyser: playbackAnalyser } = useAudioPlayback();
+  const [isInterrupted, _setIsInterrupted] = useState(false); // Kept for future use
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
+  
+  const { init: initPlayback, playChunk, stop, stopAll, analyser: playbackAnalyser } = useAudioPlayback();
   const { start: startRecording, stop: stopRecording, audioBlob } = useMediaRecorder();
 
   const [segments, setSegments] = useState<{start: number, end: number}[]>([]);
@@ -29,7 +34,6 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
   const scorecardRef = useRef<any>(null);
   const [hasReportedScorecard, setHasReportedScorecard] = useState(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
-  const lastInterruptionRef = useRef<number>(0);
 
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -123,8 +127,12 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
   }, [connected, stream, status, startRecording, send, roleId, difficulty, jobDescription, token, selectedVoice]);
 
   useEffect(() => {
-    return () => { stopCapture(); stopPlayback(); disconnect(); };
-  }, [stopCapture, stopPlayback, disconnect]);
+    return () => { 
+      stopCapture(); 
+      stop(); 
+      disconnect(); 
+    };
+  }, [stopCapture, stop, disconnect]);
 
   const getAIState = (): VisualizerState => {
     if (status === 'connecting') return 'Connecting';
@@ -139,172 +147,117 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
     return 'Idle';
   };
 
-  const isActive = status !== 'idle';
+  const getActiveAnalyser = () => {
+    if (getAIState() === 'Speaking') return playbackAnalyser;
+    if (getUserState() === 'Listening') return captureAnalyser;
+    return null;
+  };
 
-  return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-      {/* Idle Header */}
-      {status === 'idle' && (
-        <div className="text-center mb-8 sm:mb-10 animate-fade-in-up">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-2" style={{ color: 'var(--text-primary)' }}>
+  const getGlobalState = (): VisualizerState => {
+    if (status === 'connecting') return 'Connecting';
+    if (status === 'ending') return 'Idle';
+    if (isInterrupted) return 'Interrupted';
+    if (getAIState() === 'Speaking') return 'Speaking';
+    if (getUserState() === 'Listening') return 'Listening';
+    return 'Idle';
+  };
+
+  if (status === 'idle') {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 animate-fade-in">
+        <div className="text-center mb-10 max-w-xl">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 mb-6">
+            <Layout size={14} />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Spatial Stage</span>
+          </div>
+          <h1 className="text-4xl font-bold tracking-tight mb-4 text-[var(--text-primary)]">
             Interview Studio
           </h1>
-          <p className="text-[14px]" style={{ color: 'var(--text-secondary)' }}>
-            Your AI mock interview experience
+          <p className="text-zinc-500 dark:text-zinc-400 text-lg">
+            Ready to begin your mock interview with Alex? 
+            We'll use your camera and microphone for a realistic experience.
           </p>
         </div>
-      )}
 
-      {/* Visualizers */}
-      {isActive && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 animate-fade-in">
-          {[
-            { label: 'You', analyser: captureAnalyser, state: getUserState(), color: '#10B981', glow: getUserState() === 'Listening' },
-            { label: 'Alex', analyser: playbackAnalyser, state: getAIState(), color: '#FF5701', glow: getAIState() === 'Speaking' },
-          ].map(({ label, analyser, state, color, glow }) => (
-            <div
-              key={label}
-              className="rounded-2xl p-4 sm:p-5 flex flex-col items-center transition-all duration-200"
-              style={{
-                backgroundColor: 'var(--card-bg)',
-                border: `1px solid ${glow ? 'var(--accent-primary)' : 'var(--card-border)'}`,
-                boxShadow: glow ? '0 0 20px var(--accent-glow)' : 'none',
-              }}
-            >
-              <span className="text-[11px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--text-muted)' }}>
-                {label}
-              </span>
-              <AudioVisualizer analyser={analyser} state={state} color={color} />
-            </div>
-          ))}
+        <button 
+          onClick={handleStart} 
+          className="group relative flex items-center gap-3 px-8 py-4 bg-orange-500 text-white rounded-full font-bold text-lg hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20 active:scale-95"
+        >
+          <div className="absolute inset-0 bg-white/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500" />
+          <span>Begin Session</span>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-[var(--bg-primary)] flex flex-col overflow-hidden">
+      {/* Background Accent */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-500/5 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
+      </div>
+
+      {/* Header */}
+      <header className="relative z-40 p-6 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className={`w-2 h-2 rounded-full ${status === 'active' ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-zinc-500'}`} />
+          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
+            {status === 'connecting' ? 'Establishing Connection' : status === 'active' ? 'Live Session' : 'Session Ended'}
+          </span>
         </div>
-      )}
+        
+        <button
+          onClick={() => setIsTranscriptOpen(true)}
+          className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-zinc-500 group relative"
+          title="Open Transcript"
+        >
+          <MessageSquare size={20} />
+          {transcripts.length > 0 && (
+            <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full border-2 border-[var(--bg-primary)]" />
+          )}
+        </button>
+      </header>
+
+      {/* Main Stage */}
+      <main className="flex-1 flex flex-col items-center justify-center relative z-10 px-6">
+        <div className="relative">
+          <div className="absolute inset-0 bg-orange-500/5 blur-[100px] rounded-full scale-150 animate-pulse" />
+          
+          <AudioVisualizer
+            analyser={getActiveAnalyser()}
+            state={getGlobalState()}
+            size={400}
+          />
+          
+          {/* Label */}
+          <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 text-center w-full">
+            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-zinc-400 dark:text-zinc-500 mb-1">
+              {getGlobalState() === 'Speaking' ? 'Alex is speaking' : getGlobalState() === 'Listening' ? 'Alex is listening' : 'Alex · AI Interviewer'}
+            </p>
+            <div className="h-0.5 w-8 bg-orange-500/30 mx-auto rounded-full" />
+          </div>
+        </div>
+      </main>
 
       {/* Controls */}
-      <div className="mb-4 flex justify-center">
-        {status === 'idle' ? (
-          <button onClick={handleStart} className="btn-primary flex items-center gap-2.5 text-[14px] px-8 py-3.5 cursor-pointer">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-            </svg>
-            Begin Interview
-          </button>
-        ) : (
-          <div
-            className="rounded-2xl p-2 flex flex-col sm:flex-row items-center justify-between w-full max-w-3xl gap-2 sm:gap-0 animate-fade-in"
-            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}
-          >
-            {/* Status indicator */}
-            <div className="flex items-center gap-2 px-3">
-              <span
-                className="block w-2 h-2 rounded-full"
-                style={{
-                  backgroundColor: status === 'active' ? 'var(--success)' : 'var(--text-muted)',
-                  animation: status === 'active' ? 'pulse-glow 2s ease-in-out infinite' : 'none',
-                }}
-                aria-hidden="true"
-              />
-              <span className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }} role="status">
-                {status === 'connecting' ? 'Connecting' : status === 'ending' ? 'Generating Report' : 'Live'}
-              </span>
-            </div>
+      <ControlDock
+        isMuted={isMuted}
+        onToggleMute={toggleMute}
+        onFinish={handleFinishAnswer}
+        onEnd={handleEnd}
+        status={status === 'connecting' ? 'Connecting' : undefined}
+      />
 
-            {/* Action buttons */}
-            {status === 'active' && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={toggleMute}
-                  className="rounded-xl px-4 py-2 font-semibold text-[13px] flex items-center gap-1.5 transition-all cursor-pointer min-h-[40px]"
-                  style={{
-                    backgroundColor: isMuted ? 'var(--danger-surface)' : 'var(--success-surface)',
-                    color: isMuted ? 'var(--danger)' : 'var(--success)',
-                    border: `1px solid ${isMuted ? 'var(--danger)' : 'var(--success)'}`,
-                  }}
-                  aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-                >
-                  {isMuted ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L15 8.586l1.293-1.293a1 1 0 111.414 1.414L16.414 10l1.293 1.293a1 1 0 01-1.414 1.414L15 11.414l-1.293 1.293a1 1 0 01-1.414-1.414L13.586 10l-1.293-1.293a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  <span className="hidden sm:inline">{isMuted ? 'Muted' : 'Listening'}</span>
-                </button>
-
-                <button
-                  onClick={handleFinishAnswer}
-                  disabled={isMuted}
-                  className="btn-primary flex items-center gap-1.5 text-[13px] !py-2 !px-4 disabled:opacity-50 cursor-pointer min-h-[40px]"
-                  aria-label="Finish your answer"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                    <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                  </svg>
-                  <span className="hidden sm:inline">Done</span>
-                </button>
-              </div>
-            )}
-
-            {/* End session */}
-            <button
-              onClick={handleEnd}
-              disabled={status === 'ending'}
-              className="text-[13px] font-semibold px-3 py-2 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer min-h-[40px]"
-              style={{ color: 'var(--danger)', background: 'transparent', border: 'none' }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--danger-surface)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
-              aria-label="End interview session"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-              <span className="hidden sm:inline">{status === 'ending' ? 'Generating...' : 'End'}</span>
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Transcript */}
-      <div
-        className="rounded-2xl h-[320px] sm:h-[400px] overflow-y-auto p-4 sm:p-5"
-        style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}
-        role="log"
-        aria-label="Interview transcript"
-        aria-live="polite"
-      >
-        {transcripts.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full" style={{ color: 'var(--text-muted)' }}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-            <span className="text-[13px] font-medium">Transcript appears here once the interview begins</span>
-          </div>
-        )}
-        <div className="space-y-3">
-          {transcripts.map((t, i) => (
-            <div key={i} className={`flex ${t.speaker === 'interviewer' ? 'justify-start' : 'justify-end'}`}>
-              <div className={`flex flex-col ${t.speaker === 'interviewer' ? 'items-start' : 'items-end'} max-w-[88%] sm:max-w-[78%]`}>
-                <span className="text-[11px] font-semibold uppercase tracking-wider mb-1 px-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {t.speaker === 'interviewer' ? 'Alex' : 'You'}
-                </span>
-                <div
-                  className="px-3.5 py-2.5 rounded-2xl text-[14px] leading-relaxed"
-                  style={t.speaker === 'interviewer'
-                    ? { backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', color: 'var(--text-primary)', borderTopLeftRadius: '4px' }
-                    : { backgroundColor: 'var(--accent-primary)', color: '#ffffff', borderTopRightRadius: '4px' }
-                  }
-                >
-                  {t.text}
-                </div>
-              </div>
-            </div>
-          ))}
-          <div ref={transcriptEndRef} />
-        </div>
-      </div>
+      {/* Sidebar */}
+      <TranscriptDrawer
+        isOpen={isTranscriptOpen}
+        onClose={() => setIsTranscriptOpen(false)}
+        transcripts={transcripts}
+      />
     </div>
   );
 };
