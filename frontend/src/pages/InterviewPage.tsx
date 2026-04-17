@@ -24,8 +24,18 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
   const [isMuted, setIsMuted] = useState(false);
   const [isInterrupted, _setIsInterrupted] = useState(false); // Kept for future use
   const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
+  const [visualizerSize, setVisualizerSize] = useState(window.innerWidth < 768 ? 280 : 400);
   
   const { init: initPlayback, playChunk, stop, stopAll, analyser: playbackAnalyser } = useAudioPlayback();
+
+  useEffect(() => {
+    const handleResize = () => {
+      setVisualizerSize(window.innerWidth < 768 ? 280 : 400);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const { start: startRecording, stop: stopRecording, audioBlob } = useMediaRecorder();
 
   const [segments, setSegments] = useState<{start: number, end: number}[]>([]);
@@ -164,16 +174,21 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
 
   if (status === 'idle') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 animate-fade-in">
-        <div className="text-center mb-10 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 mb-6">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center p-6 animate-fade-in relative overflow-hidden">
+        <div className="nebula-bg">
+          <div className="nebula-blob nebula-blob-1" />
+          <div className="nebula-blob nebula-blob-2" />
+        </div>
+        
+        <div className="text-center mb-10 max-w-xl relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 mb-8 animate-fade-in-up delay-1">
             <Layout size={14} />
             <span className="text-[10px] font-bold uppercase tracking-widest">Spatial Stage</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight mb-4 text-[var(--text-primary)]">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-[var(--text-primary)] animate-fade-in-up delay-2 leading-[1.1]">
             Interview Studio
           </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 text-lg">
+          <p className="text-zinc-500 dark:text-zinc-400 text-lg md:text-xl animate-fade-in-up delay-3 max-w-md mx-auto">
             Ready to begin your mock interview with Alex? 
             We'll use your camera and microphone for a realistic experience.
           </p>
@@ -181,7 +196,7 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
 
         <button 
           onClick={handleStart} 
-          className="group relative flex items-center gap-3 px-8 py-4 bg-orange-500 text-white rounded-full font-bold text-lg hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20 active:scale-95"
+          className="group relative flex items-center gap-3 px-10 py-5 bg-orange-500 text-white rounded-full font-bold text-lg hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20 active:scale-95 animate-fade-in-up delay-4"
         >
           <div className="absolute inset-0 bg-white/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500" />
           <span>Begin Session</span>
@@ -196,9 +211,10 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
   return (
     <div className="fixed inset-0 bg-[var(--bg-primary)] flex flex-col overflow-hidden">
       {/* Background Accent */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-orange-500/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
+      <div className="nebula-bg">
+        <div className="nebula-blob nebula-blob-1" />
+        <div className="nebula-blob nebula-blob-2" />
+        <div className="nebula-blob nebula-blob-3" />
       </div>
 
       {/* Header */}
@@ -230,7 +246,7 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
           <AudioVisualizer
             analyser={getActiveAnalyser()}
             state={getGlobalState()}
-            size={400}
+            size={visualizerSize}
           />
           
           {/* Label */}

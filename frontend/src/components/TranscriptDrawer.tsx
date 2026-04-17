@@ -24,7 +24,7 @@ export const TranscriptDrawer: React.FC<TranscriptDrawerProps> = ({ isOpen, onCl
 
   return (
     <div 
-      className={`fixed right-0 top-0 h-screen w-80 md:w-96 glass-panel border-l border-[var(--border-primary)] z-50 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      className={`fixed right-0 top-0 h-screen w-full sm:w-80 md:w-96 glass-panel border-l border-[var(--border-primary)] z-50 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
     >
       <div className="flex flex-col h-full">
         {/* Header */}
