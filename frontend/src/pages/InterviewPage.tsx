@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { MessageSquare, Layout } from 'lucide-react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAudioCapture } from '../hooks/useAudioCapture';
@@ -8,6 +8,7 @@ import { AudioVisualizer, VisualizerState } from '../components/AudioVisualizer'
 import { ControlDock } from '../components/ControlDock';
 import { TranscriptDrawer } from '../components/TranscriptDrawer';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface InterviewPageProps {
   roleId: string;
@@ -19,23 +20,14 @@ interface InterviewPageProps {
 
 export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty, jobDescription, onScorecard, selectedVoice }) => {
   const { token } = useAuth();
+  const { theme } = useTheme();
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active' | 'ending'>('idle');
   const [isMuted, setIsMuted] = useState(false);
-  const [isInterrupted, _setIsInterrupted] = useState(false); // Kept for future use
-  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
-  const [visualizerSize, setVisualizerSize] = useState(window.innerWidth < 768 ? 280 : 400);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   
-  const { init: initPlayback, playChunk, stop, stopAll, analyser: playbackAnalyser } = useAudioPlayback();
-
-  useEffect(() => {
-    const handleResize = () => {
-      setVisualizerSize(window.innerWidth < 768 ? 280 : 400);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
+  const { init: initPlayback, playChunk, stop: stopPlayback, stopAll, analyser: playbackAnalyser } = useAudioPlayback();
   const { start: startRecording, stop: stopRecording, audioBlob } = useMediaRecorder();
 
   const [segments, setSegments] = useState<{start: number, end: number}[]>([]);
@@ -43,11 +35,19 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
   const currentSegmentRef = useRef<{start: number} | null>(null);
   const scorecardRef = useRef<any>(null);
   const [hasReportedScorecard, setHasReportedScorecard] = useState(false);
-  const transcriptEndRef = useRef<HTMLDivElement>(null);
-
+  
+  // Track window size for responsive visualizer
   useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [transcripts]);
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const visualizerSize = useMemo(() => {
+    if (windowWidth < 640) return 280;
+    if (windowWidth < 1024) return 340;
+    return 400;
+  }, [windowWidth]);
 
   const onAudio = useCallback((data: ArrayBuffer) => { playChunk(data); }, [playChunk]);
 
@@ -85,7 +85,9 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
     }
   }, [audioBlob, segments, onScorecard, hasReportedScorecard]);
 
+  const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/interview';
   const { connect, send, connected, disconnect } = useWebSocket(onAudio, onJson);
+  
   const { start: startCapture, stop: stopCapture, analyser: captureAnalyser, stream } = useAudioCapture((audioData) => {
     if (!isMuted) send(audioData);
   });
@@ -102,7 +104,7 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
       setStatus('connecting');
       await initPlayback();
       await startCapture();
-      connect('ws://localhost:8000/ws/interview');
+      connect(wsUrl);
     } catch (error) {
       console.error("Failed to start interview:", error);
       setStatus('idle');
@@ -137,141 +139,121 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
   }, [connected, stream, status, startRecording, send, roleId, difficulty, jobDescription, token, selectedVoice]);
 
   useEffect(() => {
-    return () => { 
-      stopCapture(); 
-      stop(); 
-      disconnect(); 
-    };
-  }, [stopCapture, stop, disconnect]);
+    return () => { stopCapture(); stopPlayback(); disconnect(); };
+  }, [stopCapture, stopPlayback, disconnect]);
 
-  const getAIState = (): VisualizerState => {
-    if (status === 'connecting') return 'Connecting';
-    if (isInterrupted) return 'Interrupted';
-    if (status === 'active') return 'Speaking';
-    return 'Idle';
-  };
-
-  const getUserState = (): VisualizerState => {
-    if (status === 'connecting') return 'Connecting';
-    if (status === 'active') return isMuted ? 'Idle' : 'Listening';
-    return 'Idle';
+  // Determine the global state for the single Aura visualizer
+  const getGlobalState = (): VisualizerState => {
+    if (status === 'connecting' || status === 'idle') return 'Connecting';
+    if (status === 'ending') return 'Thinking';
+    
+    // If AI is playing back, it's 'Speaking'
+    const isAISpeaking = playbackAnalyser && status === 'active'; // In real app, check if audio is actually playing
+    if (isAISpeaking) return 'Speaking';
+    
+    // Default to 'Listening' when active
+    return isMuted ? 'Idle' : 'Listening';
   };
 
   const getActiveAnalyser = () => {
-    if (getAIState() === 'Speaking') return playbackAnalyser;
-    if (getUserState() === 'Listening') return captureAnalyser;
-    return null;
-  };
-
-  const getGlobalState = (): VisualizerState => {
-    if (status === 'connecting') return 'Connecting';
-    if (status === 'ending') return 'Idle';
-    if (isInterrupted) return 'Interrupted';
-    if (getAIState() === 'Speaking') return 'Speaking';
-    if (getUserState() === 'Listening') return 'Listening';
-    return 'Idle';
+    const state = getGlobalState();
+    if (state === 'Speaking') return playbackAnalyser;
+    return captureAnalyser;
   };
 
   if (status === 'idle') {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center p-6 animate-fade-in relative overflow-hidden">
-        <div className="nebula-bg">
-          <div className="nebula-blob nebula-blob-1" />
-          <div className="nebula-blob nebula-blob-2" />
-        </div>
+      <div className="relative min-h-[calc(100dvh-56px)] flex flex-col items-center justify-center p-6 overflow-hidden">
+        <div className="nebula-bg" />
+        <div className="nebula-blob nebula-blob-1" />
+        <div className="nebula-blob nebula-blob-2" />
         
-        <div className="text-center mb-10 max-w-xl relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 mb-8 animate-fade-in-up delay-1">
-            <Layout size={14} />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Spatial Stage</span>
+        <div className="relative z-10 text-center max-w-2xl animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--accent-surface)] border border-[var(--accent-glow)] mb-6 animate-fade-in-up delay-1">
+            <Layout size={14} className="text-[var(--accent-primary)]" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent-primary)]">Spatial Stage</span>
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-[var(--text-primary)] animate-fade-in-up delay-2 leading-[1.1]">
-            Interview Studio
+          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6 animate-fade-in-up delay-2">
+            Ready to <span className="text-gradient">Begin?</span>
           </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 text-lg md:text-xl animate-fade-in-up delay-3 max-w-md mx-auto">
-            Ready to begin your mock interview with Alex? 
-            We'll use your camera and microphone for a realistic experience.
+          <p className="text-[var(--text-secondary)] text-lg mb-10 animate-fade-in-up delay-3 max-w-md mx-auto">
+            Step into an immersive, voice-first interview experience. Position yourself comfortably and ensure your microphone is clear.
           </p>
+          <button 
+            onClick={handleStart} 
+            className="btn-primary flex items-center gap-3 px-10 py-4 text-base shadow-xl shadow-orange-500/20 animate-fade-in-up delay-4 cursor-pointer"
+          >
+            Enter Studio
+          </button>
         </div>
-
-        <button 
-          onClick={handleStart} 
-          className="group relative flex items-center gap-3 px-10 py-5 bg-orange-500 text-white rounded-full font-bold text-lg hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/20 active:scale-95 animate-fade-in-up delay-4"
-        >
-          <div className="absolute inset-0 bg-white/20 rounded-full scale-0 group-hover:scale-100 transition-transform duration-500" />
-          <span>Begin Session</span>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-[var(--bg-primary)] flex flex-col overflow-hidden">
-      {/* Background Accent */}
-      <div className="nebula-bg">
-        <div className="nebula-blob nebula-blob-1" />
-        <div className="nebula-blob nebula-blob-2" />
-        <div className="nebula-blob nebula-blob-3" />
-      </div>
+    <div className="relative min-h-[calc(100dvh-56px)] bg-black overflow-hidden flex flex-col">
+      {/* Immersive Background */}
+      <div className="nebula-bg" />
+      <div className="nebula-blob nebula-blob-1" />
+      <div className="nebula-blob nebula-blob-2" />
+      <div className="nebula-blob nebula-blob-3" />
 
       {/* Header */}
-      <header className="relative z-40 p-6 flex justify-between items-center">
+      <header className="relative z-20 flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className={`w-2 h-2 rounded-full ${status === 'active' ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-zinc-500'}`} />
-          <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">
-            {status === 'connecting' ? 'Establishing Connection' : status === 'active' ? 'Live Session' : 'Session Ended'}
-          </span>
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
+            <div className={`w-1.5 h-1.5 rounded-full ${status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-500'}`} />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+              {status === 'connecting' ? 'Establishing Connection' : 'Live Session'}
+            </span>
+          </div>
         </div>
-        
-        <button
-          onClick={() => setIsTranscriptOpen(true)}
-          className="p-2.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors text-zinc-500 group relative"
-          title="Open Transcript"
+
+        <button 
+          onClick={() => setIsDrawerOpen(true)}
+          className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer backdrop-blur-md"
+          aria-label="Open transcript"
         >
           <MessageSquare size={20} />
-          {transcripts.length > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 bg-orange-500 rounded-full border-2 border-[var(--bg-primary)]" />
-          )}
         </button>
       </header>
 
-      {/* Main Stage */}
-      <main className="flex-1 flex flex-col items-center justify-center relative z-10 px-6">
+      {/* Center Stage: The Aura */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-4">
         <div className="relative">
-          <div className="absolute inset-0 bg-orange-500/5 blur-[100px] rounded-full scale-150 animate-pulse" />
-          
-          <AudioVisualizer
-            analyser={getActiveAnalyser()}
-            state={getGlobalState()}
-            size={visualizerSize}
+          {/* Subtle ring around the visualizer */}
+          <div 
+            className="absolute inset-0 rounded-full border border-white/5 animate-nebula" 
+            style={{ width: visualizerSize + 80, height: visualizerSize + 80, left: -40, top: -40 }} 
           />
-          
-          {/* Label */}
-          <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 text-center w-full">
-            <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-zinc-400 dark:text-zinc-500 mb-1">
-              {getGlobalState() === 'Speaking' ? 'Alex is speaking' : getGlobalState() === 'Listening' ? 'Alex is listening' : 'Alex · AI Interviewer'}
-            </p>
-            <div className="h-0.5 w-8 bg-orange-500/30 mx-auto rounded-full" />
-          </div>
+          <AudioVisualizer 
+            analyser={getActiveAnalyser()} 
+            state={getGlobalState()} 
+            size={visualizerSize}
+            theme={theme}
+          />
+        </div>
+        
+        {/* Role Hint */}
+        <div className="mt-12 text-center animate-fade-in delay-5">
+          <h2 className="text-zinc-500 text-[11px] font-bold uppercase tracking-[0.2em] mb-1">Current Interview</h2>
+          <p className="text-white text-lg font-medium">{roleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
         </div>
       </main>
 
-      {/* Controls */}
-      <ControlDock
+      {/* Floating Control Dock */}
+      <ControlDock 
         isMuted={isMuted}
         onToggleMute={toggleMute}
         onFinish={handleFinishAnswer}
         onEnd={handleEnd}
-        status={status === 'connecting' ? 'Connecting' : undefined}
+        status={status}
       />
 
-      {/* Sidebar */}
-      <TranscriptDrawer
-        isOpen={isTranscriptOpen}
-        onClose={() => setIsTranscriptOpen(false)}
+      {/* Transcript Drawer */}
+      <TranscriptDrawer 
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
         transcripts={transcripts}
       />
     </div>

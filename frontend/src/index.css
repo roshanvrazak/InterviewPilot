@@ -110,6 +110,10 @@ select:focus-visible {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* ─── Animations ─── */
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(12px); }
@@ -200,7 +204,7 @@ select:focus-visible {
   animation: nebula-pulse 18s ease-in-out infinite alternate 2s;
 }
 
-.glass-panel {
+.delay-1 { animation-delay: 0.06s; opacity: 0; }
 .delay-2 { animation-delay: 0.12s; opacity: 0; }
 .delay-3 { animation-delay: 0.18s; opacity: 0; }
 .delay-4 { animation-delay: 0.24s; opacity: 0; }

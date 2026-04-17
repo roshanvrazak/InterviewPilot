@@ -1,16 +1,22 @@
-// frontend/src/components/AudioVisualizer.tsx
 import React, { useEffect, useRef, useState } from 'react';
 
-export type VisualizerState = 'Speaking' | 'Listening' | 'Interrupted' | 'Connecting' | 'Idle' | 'Thinking';
+export type VisualizerState = 'Speaking' | 'Listening' | 'Interrupted' | 'Connecting' | 'Thinking' | 'Idle';
 
 interface AudioVisualizerProps {
   analyser: AnalyserNode | null;
   state?: VisualizerState;
   color?: string; // Optional override
   size?: number;
+  theme?: 'light' | 'dark';
 }
 
-export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, state = 'Idle', color, size = 180 }) => {
+export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ 
+  analyser, 
+  state = 'Idle', 
+  color, 
+  size = 180,
+  theme = 'dark'
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isInterrupted, setIsInterrupted] = useState(false);
 
@@ -26,7 +32,7 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, stat
     if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { alpha: true })!;
     const dataArray = analyser ? new Uint8Array(analyser.frequencyBinCount) : new Uint8Array(0);
 
     let animationFrameId: number;
@@ -41,48 +47,41 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, stat
     const getColors = (elapsed: number): { primary: string; glow: string } => {
       if (color) return { primary: color, glow: color };
 
-      const isDark = document.documentElement.classList.contains('dark');
-
-      if (state === 'Thinking') {
-        const hue = (elapsed * 60) % 360;
-        return {
-          primary: `hsla(${hue}, 80%, 60%, 1)`,
-          glow: `hsla(${hue}, 80%, 60%, 0.5)`,
-        };
-      }
+      const isDark = theme === 'dark';
 
       if (isInterrupted) {
         return {
           primary: isDark ? '#FBBF24' : '#D97706',
-          glow: isDark ? 'rgba(251, 191, 36, 0.4)' : 'rgba(217, 119, 6, 0.3)',
+          glow: isDark ? 'rgba(251, 191, 36, 0.3)' : 'rgba(217, 119, 6, 0.25)',
         };
       }
 
       switch (state) {
+        case 'Thinking':
+          const hue = (elapsed * 60) % 360;
+          return {
+            primary: `hsla(${hue}, 80%, 60%, 1)`,
+            glow: `hsla(${hue}, 80%, 60%, 0.3)`,
+          };
         case 'Speaking':
           return {
             primary: isDark ? '#FF6B2C' : '#FF5701',
-            glow: isDark ? 'rgba(255, 107, 44, 0.5)' : 'rgba(255, 87, 1, 0.4)',
+            glow: isDark ? 'rgba(255, 107, 44, 0.45)' : 'rgba(255, 87, 1, 0.35)',
           };
         case 'Listening':
           return {
             primary: isDark ? '#34D399' : '#10B981',
-            glow: isDark ? 'rgba(52, 211, 153, 0.5)' : 'rgba(16, 185, 129, 0.4)',
+            glow: isDark ? 'rgba(52, 211, 153, 0.45)' : 'rgba(16, 185, 129, 0.35)',
           };
         case 'Connecting':
           return {
-            primary: '#6B7280',
-            glow: 'rgba(107, 114, 128, 0.3)',
-          };
-        case 'Interrupted':
-          return {
-            primary: isDark ? '#FBBF24' : '#D97706',
-            glow: isDark ? 'rgba(251, 191, 36, 0.4)' : 'rgba(217, 119, 6, 0.3)',
+            primary: isDark ? '#52525B' : '#94A3B8',
+            glow: 'rgba(148, 163, 184, 0.2)',
           };
         default:
           return {
-            primary: isDark ? '#FF7A3D' : '#FF5701',
-            glow: isDark ? 'rgba(255, 122, 61, 0.3)' : 'rgba(255, 87, 1, 0.2)',
+            primary: isDark ? '#FF6B2C' : '#FF5701',
+            glow: isDark ? 'rgba(255, 107, 44, 0.2)' : 'rgba(255, 87, 1, 0.15)',
           };
       }
     };
@@ -100,99 +99,86 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, stat
 
       const { primary, glow } = getColors(elapsed);
 
-      // Global alpha for connecting pulse
       let globalAlpha = 1.0;
       if (state === 'Connecting') {
-        globalAlpha = 0.4 + 0.4 * Math.sin(elapsed * 3);
+        globalAlpha = 0.4 + 0.3 * Math.sin(elapsed * 4);
       }
 
       const hasData = analyser && dataArray.length > 0 && dataArray.some((v) => v > 5);
-      const avgValue = hasData ? dataArray.reduce((a, b) => a + b, 0) / dataArray.length / 255 : 0;
-
-      // -- Spatial Aura / Nebula layer --
-      ctx.save();
-      const ringCount = 4;
-      for (let i = 0; i < ringCount; i++) {
-        ctx.beginPath();
-        const blur = 15 + i * 12 + (hasData ? avgValue * 30 : 0);
-        const scale = 0.8 + i * 0.25 + (hasData ? avgValue * 0.2 : 0);
-        const alpha = (0.2 / (i + 1)) * globalAlpha;
-        
-        ctx.shadowBlur = blur;
-        ctx.shadowColor = glow;
-        ctx.strokeStyle = primary;
-        ctx.globalAlpha = alpha;
-        ctx.lineWidth = 4;
-
-        const r = BASE_RADIUS * scale + Math.sin(elapsed * 1.5 + i) * 8;
-        ctx.arc(CENTER_X, CENTER_Y, r, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.restore();
 
       if (hasData) {
-        // -- Glow layer --
+        // --- Layered Aura Effects ---
+        
+        // 1. Far outer glow (soft)
         ctx.save();
-        ctx.globalAlpha = globalAlpha * 0.6;
+        ctx.globalAlpha = globalAlpha * 0.15;
         ctx.shadowColor = glow;
-        ctx.shadowBlur = 24;
+        ctx.shadowBlur = CANVAS_SIZE * 0.3;
+        ctx.strokeStyle = primary;
+        ctx.lineWidth = 2;
+        drawRadialWaveform(ctx, dataArray, CENTER_X, CENTER_Y, BASE_RADIUS * 1.1, MAX_SPIKE * 1.2, elapsed);
+        ctx.restore();
+
+        // 2. Mid glow
+        ctx.save();
+        ctx.globalAlpha = globalAlpha * 0.3;
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = CANVAS_SIZE * 0.1;
         ctx.strokeStyle = primary;
         ctx.lineWidth = 3;
-
         drawRadialWaveform(ctx, dataArray, CENTER_X, CENTER_Y, BASE_RADIUS, MAX_SPIKE, elapsed);
         ctx.restore();
 
-        // -- Main waveform layer --
+        // 3. Sharp inner line
         ctx.save();
-        ctx.globalAlpha = globalAlpha;
+        ctx.globalAlpha = globalAlpha * 0.8;
         ctx.strokeStyle = primary;
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-
         drawRadialWaveform(ctx, dataArray, CENTER_X, CENTER_Y, BASE_RADIUS, MAX_SPIKE, elapsed);
         ctx.restore();
 
-        // -- Inner dots for texture --
+        // 4. Particle texture
         ctx.save();
-        ctx.globalAlpha = globalAlpha * 0.5;
+        ctx.globalAlpha = globalAlpha * 0.4;
         ctx.fillStyle = primary;
-        const dotCount = 36;
+        const dotCount = 48;
         for (let i = 0; i < dotCount; i++) {
-          const angle = (i / dotCount) * Math.PI * 2 - Math.PI / 2;
+          const angle = (i / dotCount) * Math.PI * 2 - Math.PI / 2 + (elapsed * 0.1);
           const sampleIndex = Math.floor((i / dotCount) * dataArray.length);
           const value = dataArray[sampleIndex] / 255;
-          const r = BASE_RADIUS - 6 - value * 8;
+          const r = BASE_RADIUS - 8 - value * (MAX_SPIKE * 0.5);
           const x = CENTER_X + Math.cos(angle) * r;
           const y = CENTER_Y + Math.sin(angle) * r;
-          const dotSize = 0.5 + value * 1.5;
+          const dotSize = 0.8 + value * 2;
           ctx.beginPath();
           ctx.arc(x, y, dotSize, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.restore();
       } else {
-        // -- Idle: subtle pulsing circle outline --
-        const pulseScale = 1 + 0.04 * Math.sin(elapsed * 1.2);
-        const pulseAlpha = 0.3 + 0.15 * Math.sin(elapsed * 1.2);
-
+        // --- Idle Aura (Nebula style) ---
+        const pulse = Math.sin(elapsed * 2);
+        const pulseScale = 1 + 0.05 * pulse;
+        
+        // Outer faint ring
         ctx.save();
-        ctx.globalAlpha = (state === 'Connecting' ? globalAlpha : 1) * pulseAlpha;
+        ctx.globalAlpha = (state === 'Connecting' ? globalAlpha : 0.15) * (0.6 + 0.2 * pulse);
+        ctx.strokeStyle = primary;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(CENTER_X, CENTER_Y, BASE_RADIUS * pulseScale * 1.2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // Main pulsing ring
+        ctx.save();
+        ctx.globalAlpha = (state === 'Connecting' ? globalAlpha : 0.3) * (0.7 + 0.3 * pulse);
         ctx.strokeStyle = primary;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(CENTER_X, CENTER_Y, BASE_RADIUS * pulseScale, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-
-        // Second ring for depth
-        const pulseScale2 = 1 + 0.06 * Math.sin(elapsed * 1.2 + 1);
-        ctx.save();
-        ctx.globalAlpha = (state === 'Connecting' ? globalAlpha : 1) * pulseAlpha * 0.5;
-        ctx.strokeStyle = primary;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(CENTER_X, CENTER_Y, (BASE_RADIUS + 15) * pulseScale2, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }
@@ -203,14 +189,18 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ analyser, stat
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [analyser, color, state, isInterrupted, size]);
+  }, [analyser, color, state, isInterrupted, size, theme]);
 
-  return <canvas ref={canvasRef} width={size} height={size} className="rounded-full" />;
+  return (
+    <canvas 
+      ref={canvasRef} 
+      width={size} 
+      height={size} 
+      className="rounded-full transition-opacity duration-700"
+    />
+  );
 };
 
-/**
- * Draws frequency data as a closed radial waveform around a circle.
- */
 function drawRadialWaveform(
   ctx: CanvasRenderingContext2D,
   dataArray: Uint8Array,
