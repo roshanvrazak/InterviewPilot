@@ -82,9 +82,9 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8 animate-fade-in-up">
-      <header className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Dashboard</h2>
-        <p className="mt-1 text-[13px]" style={{ color: 'var(--text-secondary)' }}>Track your performance and history.</p>
+      <header className="mb-8 sm:mb-12">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">Dashboard</h2>
+        <p className="mt-2 text-[14px] text-[var(--text-secondary)]">Track your performance and interview history in real-time.</p>
       </header>
 
       {error && (
@@ -101,25 +101,30 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
       ) : (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 sm:mb-8">
-            <div className="surface-elevated rounded-2xl p-5 animate-fade-in-up delay-1">
-              <span className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Interviews</span>
-              <p className="font-mono text-3xl sm:text-4xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{analytics?.total_interviews || 0}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10 sm:mb-12">
+            <div className="p-6 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-primary)] relative overflow-hidden group animate-fade-in-up delay-1">
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-[var(--accent-primary)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Total Interviews</span>
+              <p className="text-4xl font-bold mt-2 text-[var(--text-primary)]">{analytics?.total_interviews || 0}</p>
             </div>
-            <div className="surface-elevated rounded-2xl p-5 animate-fade-in-up delay-2">
-              <span className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Avg Score</span>
-              <p className="font-mono text-3xl sm:text-4xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>
+            <div className="p-6 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-primary)] relative overflow-hidden group animate-fade-in-up delay-2">
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-[var(--accent-primary)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Average Score</span>
+              <p className="text-4xl font-bold mt-2 text-[var(--text-primary)]">
                 {analytics?.average_score != null ? Number(analytics.average_score).toFixed(1) : '0.0'}
-                <span className="text-base font-medium ml-0.5" style={{ color: 'var(--text-muted)' }}>/100</span>
+                <span className="text-lg font-medium ml-1 text-[var(--text-muted)]">/100</span>
               </p>
             </div>
           </div>
 
           {/* History */}
           <div className="animate-fade-in-up delay-3">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[15px] font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>History</h3>
-              <span className="badge" style={{ color: 'var(--accent-primary)', background: 'var(--accent-surface)' }}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Interview History</h3>
+                <div className="h-0.5 w-4 bg-[var(--accent-primary)] mt-1 rounded-full" />
+              </div>
+              <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-[var(--accent-surface)] text-[var(--accent-primary)] border border-[var(--accent-primary)] border-opacity-10">
                 {history.length} session{history.length !== 1 ? 's' : ''}
               </span>
             </div>
