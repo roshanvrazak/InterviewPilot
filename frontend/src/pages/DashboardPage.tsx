@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Clock, History as HistoryIcon } from 'lucide-react';
 
 interface Analytics {
   total_interviews: number;
@@ -20,6 +21,16 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const groupedHistory = useMemo(() => {
+    return history.reduce((acc, item) => {
+      const date = new Date(item.started_at);
+      const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      if (!acc[monthYear]) acc[monthYear] = [];
+      acc[monthYear].push(item);
+      return acc;
+    }, {} as Record<string, HistoryItem[]>);
+  }, [history]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -119,7 +130,7 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
 
           {/* History */}
           <div className="animate-fade-in-up delay-3">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-8">
               <div>
                 <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Interview History</h3>
                 <div className="h-0.5 w-4 bg-[var(--accent-primary)] mt-1 rounded-full" />
@@ -136,35 +147,57 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
                 <button onClick={onGoToHome} className="btn-primary text-[14px] px-5 py-2.5 cursor-pointer">Start Interview</button>
               </div>
             ) : (
-              <div className="space-y-2">
-                {history.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl transition-all duration-150"
-                    style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)' }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-primary)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--card-border)'; }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h4 className="font-semibold text-[14px]" style={{ color: 'var(--text-primary)' }}>{item.role}</h4>
-                        <span className="badge" style={{ background: 'var(--accent-surface)', color: 'var(--accent-primary)' }}>{item.type}</span>
-                      </div>
-                      <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-                        {new Date(item.started_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                    <div className="mt-2 sm:mt-0 flex items-center gap-3">
-                      <span className="font-mono text-[15px] font-bold" style={{ color: getScoreColor(item.score) }}>
-                        {item.score}%
-                      </span>
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center font-mono font-bold text-[12px]"
-                        style={{ border: `2px solid ${getScoreColor(item.score)}`, color: getScoreColor(item.score), background: getScoreBg(item.score) }}
-                        aria-label={`Grade: ${getLetterGrade(item.score)}`}
-                      >
-                        {getLetterGrade(item.score)}
-                      </div>
+              <div className="relative pl-8 sm:pl-10 ml-2">
+                {/* Vertical Timeline Line */}
+                <div className="absolute left-0 top-2 bottom-0 w-px bg-[var(--border-primary)]" />
+                
+                {Object.entries(groupedHistory).map(([monthYear, items]) => (
+                  <div key={monthYear} className="mb-12 last:mb-0">
+                    {/* Date Sub-header */}
+                    <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)] mb-6 flex items-center">
+                      <span className="bg-[var(--bg-primary)] pr-4 relative z-10">{monthYear}</span>
+                    </h4>
+                    
+                    <div className="space-y-6">
+                      {items.map((item) => (
+                        <div key={item.id} className="relative group/item">
+                          {/* Timeline Marker */}
+                          <div className="absolute -left-[32px] sm:-left-[40px] top-6 w-2 h-2 rounded-full border border-[var(--border-primary)] bg-[var(--bg-primary)] z-10 group-hover/item:border-[var(--accent-primary)] group-hover/item:scale-125 transition-all duration-300" />
+                          
+                          <div
+                            className="p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-primary)] hover:border-[var(--accent-glow)] hover:bg-[var(--bg-surface-hover)] hover:shadow-medium transition-all duration-300 backdrop-blur-sm group/card"
+                          >
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <h4 className="font-bold text-[15px] text-[var(--text-primary)]">{item.role}</h4>
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--accent-surface)] text-[var(--accent-primary)] border border-[var(--accent-primary)] border-opacity-10">
+                                    {item.type}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[12px] text-[var(--text-muted)]">
+                                  <Clock size={12} className="text-[var(--text-muted)]" />
+                                  {new Date(item.started_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="text-right hidden sm:block">
+                                  <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1">Score</div>
+                                  <div className="text-xl font-mono font-bold" style={{ color: getScoreColor(item.score) }}>
+                                    {item.score}%
+                                  </div>
+                                </div>
+                                <div
+                                  className="w-12 h-12 rounded-xl flex items-center justify-center font-mono font-bold text-lg transition-transform group-hover/card:scale-110"
+                                  style={{ border: `1px solid ${getScoreColor(item.score)}`, color: getScoreColor(item.score), background: getScoreBg(item.score) }}
+                                >
+                                  {getLetterGrade(item.score)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
