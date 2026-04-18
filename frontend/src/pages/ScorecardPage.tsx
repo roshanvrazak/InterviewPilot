@@ -59,63 +59,79 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ scorecard, onResta
   return (
     <div className="max-w-3xl mx-auto py-8 sm:py-12 px-4 sm:px-6">
       {/* Score Header */}
-      <div className="surface-elevated rounded-2xl p-6 sm:p-8 text-center relative overflow-hidden animate-fade-in-up mb-6">
-        <div className="absolute top-0 left-0 w-full h-[3px]" style={{ background: 'linear-gradient(90deg, var(--accent-primary), var(--accent-secondary))' }} aria-hidden="true" />
-
-        <div className="text-[12px] font-semibold uppercase tracking-wider mb-6" style={{ color: 'var(--accent-primary)' }}>
-          Performance Report
+      <div className="surface-elevated rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden animate-fade-in-up mb-8 border border-[var(--border-subtle)]">
+        {/* Cinematic Aura Background */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden" aria-hidden="true">
+          <div className="absolute w-[300px] h-[300px] rounded-full opacity-20 blur-[100px] animate-pulse" 
+            style={{ background: 'var(--accent-primary)', top: '10%', left: '20%' }} />
+          <div className="absolute w-[250px] h-[250px] rounded-full opacity-10 blur-[80px] animate-pulse" 
+            style={{ background: 'var(--accent-secondary)', bottom: '10%', right: '20%', animationDelay: '1s' }} />
         </div>
 
-        {/* Scores */}
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-8 sm:gap-10 mb-6">
-          <div className="relative" role="img" aria-label={`Overall score: ${scorecard.overall_score} out of 10`}>
-            <svg className="w-28 h-28 sm:w-36 sm:h-36 transform -rotate-90">
-              <circle cx="50%" cy="50%" r="42%" strokeWidth="6" fill="transparent" style={{ stroke: 'var(--border-subtle)' }} />
-              <circle cx="50%" cy="50%" r="42%" strokeWidth="6" fill="transparent"
-                strokeDasharray={440} strokeDashoffset={440 - (440 * scorecard.overall_score) / 10}
-                strokeLinecap="round" style={{ stroke: 'var(--accent-primary)', transition: 'stroke-dashoffset 1s ease-out' }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl sm:text-4xl font-extrabold font-mono" style={{ color: 'var(--text-primary)' }}>{scorecard.overall_score}</span>
-              <span className="text-[11px] font-semibold uppercase tracking-wider mt-0.5" style={{ color: 'var(--text-muted)' }}>/ 10</span>
-            </div>
+        <div className="relative z-10">
+          <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.3em] mb-10 opacity-70" style={{ color: 'var(--accent-primary)' }}>
+            Performance Report
           </div>
 
-          {scorecard.jd_match_score !== undefined && (
-            <div className="relative" role="img" aria-label={`JD match score: ${scorecard.jd_match_score} percent`}>
-              <svg className="w-28 h-28 sm:w-36 sm:h-36 transform -rotate-90">
-                <circle cx="50%" cy="50%" r="42%" strokeWidth="6" fill="transparent" style={{ stroke: 'var(--border-subtle)' }} />
-                <circle cx="50%" cy="50%" r="42%" strokeWidth="6" fill="transparent"
-                  strokeDasharray={440} strokeDashoffset={440 - (440 * scorecard.jd_match_score) / 100}
-                  strokeLinecap="round" style={{ stroke: 'var(--success)', transition: 'stroke-dashoffset 1s ease-out' }}
+          {/* Centered Large Radial Score */}
+          <div className="flex flex-col items-center justify-center mb-10">
+            <div className="relative inline-flex items-center justify-center group" role="img" aria-label={`Overall score: ${scorecard.overall_score} out of 10`}>
+              {/* Outer Glow Ring */}
+              <div className="absolute inset-0 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-700"
+                style={{ background: 'var(--accent-primary)' }} />
+              
+              <svg className="w-48 h-48 sm:w-56 sm:h-56 transform -rotate-90 relative z-10">
+                <circle cx="50%" cy="50%" r="45%" strokeWidth="1" fill="transparent" style={{ stroke: 'var(--border-subtle)' }} strokeDasharray="4 4" />
+                <circle cx="50%" cy="50%" r="45%" strokeWidth="8" fill="transparent"
+                  strokeDasharray={565} strokeDashoffset={565 - (565 * scorecard.overall_score) / 10}
+                  strokeLinecap="round" style={{ stroke: 'var(--accent-primary)', transition: 'stroke-dashoffset 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
                 />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl sm:text-4xl font-extrabold font-mono" style={{ color: 'var(--text-primary)' }}>{scorecard.jd_match_score}%</span>
-                <span className="text-[11px] font-semibold uppercase tracking-wider mt-0.5" style={{ color: 'var(--text-muted)' }}>JD Match</span>
+              
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                <span className="text-6xl sm:text-7xl font-black tracking-tighter" style={{ color: 'var(--text-primary)' }}>{scorecard.overall_score}</span>
+                <span className="text-[12px] font-bold uppercase tracking-[0.2em] mt-1 opacity-50" style={{ color: 'var(--text-muted)' }}>Score</span>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Summary */}
-        <div className="max-w-xl mx-auto">
-          <p className="text-[14px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-            {scorecard.summary}
-          </p>
+            {/* Secondary Minimalist JD Match Gauge */}
+            {scorecard.jd_match_score !== undefined && (
+              <div className="mt-8 flex items-center gap-4 px-6 py-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 backdrop-blur-sm"
+                   role="img" aria-label={`JD match score: ${scorecard.jd_match_score} percent`}>
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle cx="50%" cy="50%" r="40%" strokeWidth="2" fill="transparent" style={{ stroke: 'var(--border-subtle)' }} />
+                    <circle cx="50%" cy="50%" r="40%" strokeWidth="2" fill="transparent"
+                      strokeDasharray={100} strokeDashoffset={100 - (scorecard.jd_match_score)}
+                      strokeLinecap="round" style={{ stroke: 'var(--success)', transition: 'stroke-dashoffset 1s ease-out' }}
+                    />
+                  </svg>
+                  <span className="absolute text-[10px] font-bold" style={{ color: 'var(--text-primary)' }}>{scorecard.jd_match_score}%</span>
+                </div>
+                <div className="text-left">
+                  <div className="text-[10px] font-bold uppercase tracking-wider opacity-50">JD Match</div>
+                  <div className="text-[12px] font-semibold" style={{ color: 'var(--success)' }}>High Relevance</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Summary */}
+          <div className="max-w-xl mx-auto">
+            <p className="text-[15px] leading-relaxed font-medium" style={{ color: 'var(--text-secondary)' }}>
+              {scorecard.summary}
+            </p>
+          </div>
         </div>
 
         {/* Audio */}
         {audioUrl && (
-          <div className="mt-6 p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-primary)' }}>
-            <div className="text-[11px] font-semibold uppercase tracking-wider mb-3 flex items-center justify-center gap-1.5" style={{ color: 'var(--text-muted)' }}>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 14.868a1 1 0 01-1.414 0A6.488 6.488 0 0015 10a6.488 6.488 0 00-1.757-4.868 1 1 0 011.414-1.414A8.483 8.483 0 0117 10a8.483 8.483 0 01-2.343 4.868z" clipRule="evenodd" />
-              </svg>
-              Replay
+          <div className="mt-10 p-5 rounded-2xl relative z-10 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 backdrop-blur-md">
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] mb-4 flex items-center justify-center gap-2 opacity-50">
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+              Recording Session
             </div>
-            <audio ref={audioRef} controls src={audioUrl} className="w-full h-10" aria-label="Interview audio recording" />
+            <audio ref={audioRef} controls src={audioUrl} className="w-full h-10 opacity-80 hover:opacity-100 transition-opacity" />
           </div>
         )}
       </div>
