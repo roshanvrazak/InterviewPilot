@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Clock, History as HistoryIcon } from 'lucide-react';
 
 interface Analytics {
   total_interviews: number;
@@ -20,6 +21,16 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const groupedHistory = useMemo(() => {
+    return history.reduce((acc, item) => {
+      const date = new Date(item.started_at);
+      const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      if (!acc[monthYear]) acc[monthYear] = [];
+      acc[monthYear].push(item);
+      return acc;
+    }, {} as Record<string, HistoryItem[]>);
+  }, [history]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -82,9 +93,9 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8 animate-fade-in-up">
-      <header className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Dashboard</h2>
-        <p className="mt-1 text-[13px]" style={{ color: 'var(--text-secondary)' }}>Track your performance and history.</p>
+      <header className="mb-8 sm:mb-12">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]">Dashboard</h2>
+        <p className="mt-2 text-[14px] text-[var(--text-secondary)]">Track your performance and interview history in real-time.</p>
       </header>
 
       {error && (
@@ -94,72 +105,118 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="w-10 h-10 rounded-full animate-spin mb-3" style={{ border: '3px solid var(--border-primary)', borderTopColor: 'var(--accent-primary)' }} role="status" aria-label="Loading" />
-          <p className="text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>Loading...</p>
+        <div className="flex flex-col items-center justify-center py-24 animate-fade-in">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full border-2 border-[var(--accent-primary)] opacity-20" />
+            <div className="absolute inset-0 w-12 h-12 rounded-full border-2 border-[var(--accent-primary)] animate-ping opacity-40" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+            </div>
+          </div>
+          <p className="mt-8 text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--text-muted)] animate-pulse">Syncing Data</p>
         </div>
       ) : (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 sm:mb-8">
-            <div className="surface-elevated rounded-2xl p-5 animate-fade-in-up delay-1">
-              <span className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Interviews</span>
-              <p className="font-mono text-3xl sm:text-4xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{analytics?.total_interviews || 0}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10 sm:mb-12">
+            <div className="p-6 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-primary)] relative overflow-hidden group animate-fade-in-up delay-1">
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-[var(--accent-primary)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Total Interviews</span>
+              <p className="text-4xl font-bold mt-2 text-[var(--text-primary)]">{analytics?.total_interviews || 0}</p>
             </div>
-            <div className="surface-elevated rounded-2xl p-5 animate-fade-in-up delay-2">
-              <span className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Avg Score</span>
-              <p className="font-mono text-3xl sm:text-4xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>
+            <div className="p-6 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-primary)] relative overflow-hidden group animate-fade-in-up delay-2">
+              <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-[var(--accent-primary)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Average Score</span>
+              <p className="text-4xl font-bold mt-2 text-[var(--text-primary)]">
                 {analytics?.average_score != null ? Number(analytics.average_score).toFixed(1) : '0.0'}
-                <span className="text-base font-medium ml-0.5" style={{ color: 'var(--text-muted)' }}>/100</span>
+                <span className="text-lg font-medium ml-1 text-[var(--text-muted)]">/100</span>
               </p>
             </div>
           </div>
 
           {/* History */}
           <div className="animate-fade-in-up delay-3">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[15px] font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>History</h3>
-              <span className="badge" style={{ color: 'var(--accent-primary)', background: 'var(--accent-surface)' }}>
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Interview History</h3>
+                <div className="h-0.5 w-4 bg-[var(--accent-primary)] mt-1 rounded-full" />
+              </div>
+              <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-[var(--accent-surface)] text-[var(--accent-primary)] border border-[var(--accent-primary)] border-opacity-10">
                 {history.length} session{history.length !== 1 ? 's' : ''}
               </span>
             </div>
 
             {history.length === 0 ? (
-              <div className="rounded-2xl p-10 sm:p-14 text-center" style={{ border: '2px dashed var(--border-primary)' }}>
-                <p className="text-[15px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No interviews yet</p>
-                <p className="text-[13px] mb-5" style={{ color: 'var(--text-muted)' }}>Start your first mock interview to see your progress.</p>
-                <button onClick={onGoToHome} className="btn-primary text-[14px] px-5 py-2.5 cursor-pointer">Start Interview</button>
+              <div className="relative overflow-hidden rounded-[2.5rem] p-12 sm:p-20 text-center border border-[var(--border-primary)] bg-[var(--bg-surface)] shadow-2xl animate-fade-in-up">
+                <div className="nebula-bg opacity-40" />
+                <div className="nebula-blob nebula-blob-1 opacity-20" />
+                <div className="nebula-blob nebula-blob-2 opacity-20" />
+                
+                <div className="relative z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-[var(--accent-surface)] border border-[var(--accent-glow)] flex items-center justify-center mx-auto mb-8 animate-float shadow-lg shadow-orange-500/10">
+                    <HistoryIcon size={32} className="text-[var(--accent-primary)]" />
+                  </div>
+                  <h3 className="text-2xl font-bold tracking-tight mb-3 text-[var(--text-primary)]">Your Journey Awaits</h3>
+                  <p className="text-[15px] mb-10 text-[var(--text-secondary)] max-w-sm mx-auto leading-relaxed">
+                    You haven't completed any interviews yet. Start your first session to unlock personalized analytics and performance tracking.
+                  </p>
+                  <button onClick={onGoToHome} className="btn-primary text-[15px] px-8 py-3.5 shadow-xl shadow-orange-500/20 cursor-pointer">
+                    Start First Interview
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="space-y-2">
-                {history.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl transition-all duration-150"
-                    style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)' }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-primary)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--card-border)'; }}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h4 className="font-semibold text-[14px]" style={{ color: 'var(--text-primary)' }}>{item.role}</h4>
-                        <span className="badge" style={{ background: 'var(--accent-surface)', color: 'var(--accent-primary)' }}>{item.type}</span>
-                      </div>
-                      <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-                        {new Date(item.started_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                    <div className="mt-2 sm:mt-0 flex items-center gap-3">
-                      <span className="font-mono text-[15px] font-bold" style={{ color: getScoreColor(item.score) }}>
-                        {item.score}%
-                      </span>
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center font-mono font-bold text-[12px]"
-                        style={{ border: `2px solid ${getScoreColor(item.score)}`, color: getScoreColor(item.score), background: getScoreBg(item.score) }}
-                        aria-label={`Grade: ${getLetterGrade(item.score)}`}
-                      >
-                        {getLetterGrade(item.score)}
-                      </div>
+              <div className="relative pl-8 sm:pl-10 ml-2">
+                {/* Vertical Timeline Line */}
+                <div className="absolute left-0 top-2 bottom-0 w-px bg-[var(--border-primary)]" />
+                
+                {Object.entries(groupedHistory).map(([monthYear, items]) => (
+                  <div key={monthYear} className="mb-12 last:mb-0">
+                    {/* Date Sub-header */}
+                    <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)] mb-6 flex items-center">
+                      <span className="bg-[var(--bg-primary)] pr-4 relative z-10">{monthYear}</span>
+                    </h4>
+                    
+                    <div className="space-y-6">
+                      {items.map((item) => (
+                        <div key={item.id} className="relative group/item">
+                          {/* Timeline Marker */}
+                          <div className="absolute -left-[32px] sm:-left-[40px] top-6 w-2 h-2 rounded-full border border-[var(--border-primary)] bg-[var(--bg-primary)] z-10 group-hover/item:border-[var(--accent-primary)] group-hover/item:scale-125 transition-all duration-300" />
+                          
+                          <div
+                            className="p-5 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-primary)] hover:border-[var(--accent-glow)] hover:bg-[var(--bg-surface-hover)] hover:shadow-medium transition-all duration-300 backdrop-blur-sm group/card"
+                          >
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <h4 className="font-bold text-[15px] text-[var(--text-primary)]">{item.role}</h4>
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[var(--accent-surface)] text-[var(--accent-primary)] border border-[var(--accent-primary)] border-opacity-10">
+                                    {item.type}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 text-[12px] text-[var(--text-muted)]">
+                                  <Clock size={12} className="text-[var(--text-muted)]" />
+                                  {new Date(item.started_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="text-right hidden sm:block">
+                                  <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1">Score</div>
+                                  <div className="text-xl font-mono font-bold" style={{ color: getScoreColor(item.score) }}>
+                                    {item.score}%
+                                  </div>
+                                </div>
+                                <div
+                                  className="w-12 h-12 rounded-xl flex items-center justify-center font-mono font-bold text-lg transition-transform group-hover/card:scale-110"
+                                  style={{ border: `1px solid ${getScoreColor(item.score)}`, color: getScoreColor(item.score), background: getScoreBg(item.score) }}
+                                >
+                                  {getLetterGrade(item.score)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
