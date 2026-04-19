@@ -255,10 +255,14 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ scorecard, onResta
           className="btn-secondary flex-1 py-3.5 rounded-xl text-[14px] flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
         >
           {isDownloading ? (
-            <>
-              <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid var(--border-primary)', borderTopColor: 'var(--accent-primary)' }} aria-hidden="true" />
-              Preparing...
-            </>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                <div className="w-1 h-1 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+                <div className="w-1 h-1 rounded-full bg-[var(--accent-primary)] animate-pulse [animation-delay:0.2s]" />
+                <div className="w-1 h-1 rounded-full bg-[var(--accent-primary)] animate-pulse [animation-delay:0.4s]" />
+              </div>
+              <span className="text-[11px] font-bold uppercase tracking-widest opacity-70">Exporting</span>
+            </div>
           ) : (
             <>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">

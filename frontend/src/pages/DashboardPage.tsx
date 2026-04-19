@@ -105,9 +105,15 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="w-10 h-10 rounded-full animate-spin mb-3" style={{ border: '3px solid var(--border-primary)', borderTopColor: 'var(--accent-primary)' }} role="status" aria-label="Loading" />
-          <p className="text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>Loading...</p>
+        <div className="flex flex-col items-center justify-center py-24 animate-fade-in">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full border-2 border-[var(--accent-primary)] opacity-20" />
+            <div className="absolute inset-0 w-12 h-12 rounded-full border-2 border-[var(--accent-primary)] animate-ping opacity-40" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+            </div>
+          </div>
+          <p className="mt-8 text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--text-muted)] animate-pulse">Syncing Data</p>
         </div>
       ) : (
         <>
@@ -141,10 +147,23 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
             </div>
 
             {history.length === 0 ? (
-              <div className="rounded-2xl p-10 sm:p-14 text-center" style={{ border: '2px dashed var(--border-primary)' }}>
-                <p className="text-[15px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No interviews yet</p>
-                <p className="text-[13px] mb-5" style={{ color: 'var(--text-muted)' }}>Start your first mock interview to see your progress.</p>
-                <button onClick={onGoToHome} className="btn-primary text-[14px] px-5 py-2.5 cursor-pointer">Start Interview</button>
+              <div className="relative overflow-hidden rounded-[2.5rem] p-12 sm:p-20 text-center border border-[var(--border-primary)] bg-[var(--bg-surface)] shadow-2xl animate-fade-in-up">
+                <div className="nebula-bg opacity-40" />
+                <div className="nebula-blob nebula-blob-1 opacity-20" />
+                <div className="nebula-blob nebula-blob-2 opacity-20" />
+                
+                <div className="relative z-10">
+                  <div className="w-16 h-16 rounded-2xl bg-[var(--accent-surface)] border border-[var(--accent-glow)] flex items-center justify-center mx-auto mb-8 animate-float shadow-lg shadow-orange-500/10">
+                    <HistoryIcon size={32} className="text-[var(--accent-primary)]" />
+                  </div>
+                  <h3 className="text-2xl font-bold tracking-tight mb-3 text-[var(--text-primary)]">Your Journey Awaits</h3>
+                  <p className="text-[15px] mb-10 text-[var(--text-secondary)] max-w-sm mx-auto leading-relaxed">
+                    You haven't completed any interviews yet. Start your first session to unlock personalized analytics and performance tracking.
+                  </p>
+                  <button onClick={onGoToHome} className="btn-primary text-[15px] px-8 py-3.5 shadow-xl shadow-orange-500/20 cursor-pointer">
+                    Start First Interview
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="relative pl-8 sm:pl-10 ml-2">
