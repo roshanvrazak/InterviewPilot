@@ -138,41 +138,73 @@ export const ScorecardPage: React.FC<ScorecardPageProps> = ({ scorecard, onResta
 
       {/* Categories */}
       {scorecard.categories && (
-        <div className="animate-fade-in-up delay-1 mb-6">
-          <h3 className="text-[15px] font-bold tracking-tight mb-3" style={{ color: 'var(--text-primary)' }}>
-            Detailed Assessment
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {Object.entries(scorecard.categories).map(([key, value]: [string, any], index) => (
-              <div key={key} className="surface-elevated rounded-2xl p-4 sm:p-5 flex flex-col h-full">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="capitalize text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {key.replace('_', ' ')}
-                  </h4>
-                  <span className="text-lg font-bold font-mono" style={{ color: 'var(--accent-primary)' }}>
-                    {value.score}
-                  </span>
+        <div className="animate-fade-in-up delay-1 mb-12">
+          <div className="flex items-center justify-between mb-6 px-1">
+            <h3 className="text-[12px] font-bold uppercase tracking-[0.25em] opacity-40" style={{ color: 'var(--text-primary)' }}>
+              Evaluation Breakdown
+            </h3>
+            <div className="h-[1px] flex-grow mx-4 bg-[var(--border-primary)] opacity-20" />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            {Object.entries(scorecard.categories).map(([key, value]: [string, any], index) => {
+              // More dynamic bento sizing logic for a 12-column grid
+              const spanClass = index % 5 === 0 ? 'md:col-span-8' : 
+                                index % 5 === 1 ? 'md:col-span-4' : 
+                                index % 5 === 2 ? 'md:col-span-4' :
+                                index % 5 === 3 ? 'md:col-span-4' :
+                                'md:col-span-4';
+              
+              return (
+                <div 
+                  key={key} 
+                  className={`${spanClass} bg-[var(--bg-elevated)] border border-[var(--border-primary)] rounded-[2rem] p-8 flex flex-col h-full bg-gradient-to-br from-[var(--bg-elevated)] via-[var(--bg-elevated)] to-[var(--bg-secondary)]/30 transition-all duration-500 hover:border-[var(--accent-primary)]/30 hover:shadow-[0_20px_40px_rgba(0,0,0,0.03)] group relative overflow-hidden`}
+                >
+                  <div className="flex justify-between items-start mb-6 relative z-10">
+                    <div>
+                      <h4 className="capitalize text-[15px] font-bold tracking-tight mb-1" style={{ color: 'var(--text-primary)' }}>
+                        {key.replace('_', ' ')}
+                      </h4>
+                      <div className="h-1 w-6 rounded-full bg-gradient-to-r from-[var(--accent-primary)] to-transparent opacity-40 group-hover:w-10 transition-all duration-500" />
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-black font-mono leading-none tracking-tighter" style={{ color: 'var(--accent-primary)' }}>
+                          {value.score}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase opacity-20">/ 10</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-[14px] leading-relaxed mb-8 flex-grow font-medium opacity-80" style={{ color: 'var(--text-secondary)' }}>
+                    {value.feedback}
+                  </p>
+                  
+                  {scorecard.segments && scorecard.segments[index] && (
+                    <button
+                      onClick={() => playSegment(scorecard.segments[index].start, scorecard.segments[index].end)}
+                      className="mt-auto group/btn flex items-center gap-3 self-start py-2 px-1 rounded-full text-[11px] font-bold uppercase tracking-[0.15em] text-[var(--text-muted)] hover:text-[var(--accent-primary)] transition-all duration-300 cursor-pointer"
+                      aria-label={`Replay your response for ${key.replace('_', ' ')}`}
+                    >
+                      <div className="w-8 h-8 rounded-full border border-[var(--border-primary)] flex items-center justify-center group-hover/btn:border-[var(--accent-primary)] group-hover/btn:bg-[var(--accent-surface)] transition-all duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 fill-current" viewBox="0 0 20 20">
+                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                        </svg>
+                      </div>
+                      <span>Replay</span>
+                    </button>
+                  )}
+                  
+                  {/* Decorative background element */}
+                  <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-[var(--accent-primary)]/5 blur-3xl group-hover:bg-[var(--accent-primary)]/10 transition-colors duration-500" />
                 </div>
-                <p className="text-[13px] leading-relaxed mb-3 flex-grow" style={{ color: 'var(--text-secondary)' }}>
-                  {value.feedback}
-                </p>
-                {scorecard.segments && scorecard.segments[index] && (
-                  <button
-                    onClick={() => playSegment(scorecard.segments[index].start, scorecard.segments[index].end)}
-                    className="btn-secondary w-full text-[12px] py-2 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer min-h-[40px]"
-                    aria-label={`Review your response for ${key.replace('_', ' ')}`}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                    </svg>
-                    Replay
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
+
 
       {/* Gap Analysis + Tips */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 animate-fade-in-up delay-2">
