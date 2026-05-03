@@ -143,9 +143,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
               className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--border-primary)] transition-colors cursor-pointer"
             >
               {isLogin ? (
-                <span>>> REGISTER_NEW_ACCOUNT</span>
+                <span>{">>"} REGISTER_NEW_ACCOUNT</span>
               ) : (
-                <span>>> RETURN_TO_LOGIN_GATEWAY</span>
+                <span>{">>"} RETURN_TO_LOGIN_GATEWAY</span>
               )}
             </button>
           </div>

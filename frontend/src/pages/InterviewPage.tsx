@@ -172,9 +172,9 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
             Initialize_Session?
           </h1>
           <p className="text-[var(--text-secondary)] text-sm mb-12 max-w-md mx-auto leading-relaxed border-l-2 border-[var(--border-primary)] pl-6 text-left">
-            > Establishing high-precision voice-link.<br/>
-            > Calibrating acoustic sensors.<br/>
-            > Ready for input.
+            {">"} Establishing high-precision voice-link.<br/>
+            {">"} Calibrating acoustic sensors.<br/>
+            {">"} Ready for input.
           </p>
           <button 
             onClick={handleStart} 
