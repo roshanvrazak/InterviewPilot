@@ -123,65 +123,11 @@ select:focus-visible {
   50% { background-position: 100% 50%; }
 }
 
-@keyframes nebula-pulse {
-  0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.3; }
-  33% { transform: scale(1.1) translate(2%, 3%); opacity: 0.5; }
-  66% { transform: scale(0.9) translate(-1%, 2%); opacity: 0.4; }
-}
-
-.animate-nebula {
-  animation: nebula-pulse 15s ease-in-out infinite alternate;
-}
-
 .animate-fade-in-up { animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
 .animate-float { animation: float 3s ease-in-out infinite; }
 
 /* ─── Utility Classes ─── */
-.nebula-bg {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-  background: var(--bg-primary);
-}
-
-.nebula-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.4;
-  will-change: transform, opacity;
-}
-
-.nebula-blob-1 {
-  top: -10%;
-  left: -5%;
-  width: 50vw;
-  height: 50vw;
-  background: radial-gradient(circle, rgba(255, 87, 1, 0.15) 0%, transparent 70%);
-  animation: nebula-pulse 20s ease-in-out infinite alternate;
-}
-
-.nebula-blob-2 {
-  bottom: -15%;
-  right: -5%;
-  width: 60vw;
-  height: 60vw;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
-  animation: nebula-pulse 25s ease-in-out infinite alternate-reverse;
-}
-
-.nebula-blob-3 {
-  top: 20%;
-  right: 10%;
-  width: 30vw;
-  height: 30vw;
-  background: radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, transparent 70%);
-  animation: nebula-pulse 18s ease-in-out infinite alternate 2s;
-}
-
 .delay-1 { animation-delay: 0.06s; opacity: 0; }
 .delay-2 { animation-delay: 0.12s; opacity: 0; }
 .delay-3 { animation-delay: 0.18s; opacity: 0; }
@@ -215,28 +161,6 @@ select:focus-visible {
 .glow-accent {
   box-shadow: 0 0 0 1px var(--accent-primary),
               0 0 20px var(--accent-glow);
-}
-
-.text-gradient {
-  background: linear-gradient(135deg, var(--accent-primary) 0%, #FF9966 50%, var(--accent-primary) 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradient-shift 3s ease infinite;
-}
-
-/* ─── Card with gradient border ─── */
-.card-gradient-border {
-  position: relative;
-  background: var(--card-bg);
-  border-radius: 16px;
-  border: 1px solid var(--card-border);
-  transition: all 0.2s ease;
-}
-.card-gradient-border:hover {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 1px var(--accent-glow), 0 8px 32px rgba(var(--shadow-color) / 0.08);
 }
 
 /* ─── Button Styles ─── */
