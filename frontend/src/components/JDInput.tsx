@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Upload, FileText, Database } from 'lucide-react';
 
 interface JDInputProps {
   onJDChange: (jd: string) => void;
@@ -33,58 +34,51 @@ export const JDInput: React.FC<JDInputProps> = ({ onJDChange }) => {
   };
 
   return (
-    <div className="surface-elevated rounded-2xl p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <label className="text-[13px] font-semibold tracking-wide" style={{ color: 'var(--text-muted)' }}>
-          JOB DESCRIPTION
-        </label>
-        <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
-          Optional
+    <div className="border border-[var(--border-subtle)] bg-black p-8 font-mono">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3 text-[var(--border-primary)]">
+           <Database size={16} />
+           <label className="text-[11px] font-bold uppercase tracking-[0.25em]">
+             Data_Input: JOB_DESCRIPTION
+           </label>
+        </div>
+        <span className="text-[10px] font-bold px-2 py-0.5 border border-[var(--border-subtle)] text-[var(--text-muted)] uppercase tracking-widest">
+          OPTIONAL_FIELD
         </span>
       </div>
 
-      <textarea
-        className="w-full h-28 p-3.5 rounded-xl text-[14px] outline-none transition-all duration-200 mb-3 resize-none"
-        style={{
-          backgroundColor: 'var(--bg-secondary)',
-          border: '1.5px solid var(--border-primary)',
-          color: 'var(--text-primary)',
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = 'var(--accent-primary)';
-          e.currentTarget.style.boxShadow = '0 0 0 3px var(--accent-glow)';
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = 'var(--border-primary)';
-          e.currentTarget.style.boxShadow = 'none';
-        }}
-        placeholder="Paste the job description here for tailored questions..."
-        value={pastedJD}
-        onChange={(e) => { setPastedJD(e.target.value); onJDChange(e.target.value); }}
-      />
+      <div className="relative mb-6">
+          <textarea
+            className="w-full h-40 p-5 bg-[var(--bg-secondary)] border border-[var(--border-primary)] text-[13px] outline-none transition-all duration-200 resize-none text-white focus:bg-black"
+            placeholder="[ PASTE_RAW_TEXT_HERE_FOR_TAILORED_DIAGNOSTICS ]"
+            value={pastedJD}
+            onChange={(e) => { setPastedJD(e.target.value); onJDChange(e.target.value); }}
+          />
+          {/* Decorative corner */}
+          <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[var(--border-primary)] opacity-50" />
+      </div>
 
-      <div
-        className="flex items-center justify-between p-3 rounded-xl"
-        style={{ backgroundColor: 'var(--bg-secondary)', border: '1.5px dashed var(--border-primary)' }}
-      >
-        <span className="text-[12px] font-medium" style={{ color: 'var(--text-muted)' }}>
-          Or upload a PDF / DOCX
-        </span>
-        <label
-          className="text-[12px] font-semibold px-3.5 py-1.5 rounded-lg cursor-pointer transition-all"
-          style={{ backgroundColor: 'var(--accent-surface)', color: 'var(--accent-primary)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--accent-primary)'; e.currentTarget.style.color = '#fff'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'var(--accent-surface)'; e.currentTarget.style.color = 'var(--accent-primary)'; }}
-        >
-          Choose File
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 p-4 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+        <div className="flex items-center gap-3 text-[var(--text-muted)]">
+          <FileText size={16} />
+          <span className="text-[11px] font-bold uppercase tracking-widest">
+            EXTERNAL_DOC_UPLOAD
+          </span>
+        </div>
+        
+        <label className="group flex items-center gap-3 px-6 py-2 border border-[var(--border-primary)] text-[var(--border-primary)] hover:bg-[var(--border-primary)] hover:text-black transition-all cursor-pointer">
+          <Upload size={14} />
+          <span className="text-[11px] font-bold uppercase tracking-tighter">
+            [ EXECUTE: FILE_IMPORT ]
+          </span>
           <input type="file" accept=".pdf,.docx" onChange={handleFileUpload} disabled={loading} className="hidden" />
         </label>
       </div>
 
       {loading && (
-        <div className="flex items-center gap-2 text-[12px] mt-2.5 animate-fade-in" style={{ color: 'var(--accent-primary)' }}>
-          <div className="w-3 h-3 rounded-full animate-spin" style={{ border: '2px solid var(--accent-surface)', borderTopColor: 'var(--accent-primary)' }} />
-          Parsing file...
+        <div className="flex items-center gap-3 text-[11px] font-bold mt-6 text-[var(--border-primary)] animate-pulse uppercase tracking-[0.2em]">
+          <div className="w-2 h-2 bg-[var(--border-primary)]" />
+          SYSTEM_BUSY: PARSING_DATA_STREAM...
         </div>
       )}
     </div>

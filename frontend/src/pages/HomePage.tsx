@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RoleCard } from '../components/RoleCard';
 import { JDInput } from '../components/JDInput';
+import { Terminal, Settings, Shield } from 'lucide-react';
 
 const roles = [
   { id: 'software_engineer', name: 'Software Engineer', description: 'General technical interview focusing on coding and system design.', type: 'Mixed', icon: '01' },
@@ -29,111 +30,122 @@ export const HomePage: React.FC<HomePageProps> = ({ onSelectRole, selectedVoice,
   const [jobDescription, setJobDescription] = useState('');
 
   return (
-    <div>
-      {/* Hero */}
-      <div className="pt-16 sm:pt-20 md:pt-28 pb-12 sm:pb-16 px-4 sm:px-6 max-w-3xl mx-auto text-center">
-        <div className="animate-fade-in-up">
-          <span
-            className="badge mb-5"
-            style={{ backgroundColor: 'var(--accent-surface)', color: 'var(--accent-primary)' }}
-          >
-            AI-Powered Interview Prep
-          </span>
+    <div className="font-mono bg-black min-h-screen">
+      {/* Hero / System Header */}
+      <div className="pt-20 pb-16 px-4 sm:px-6 max-w-4xl mx-auto text-center border-b border-[var(--border-subtle)] relative overflow-hidden">
+        {/* Subtle grid in hero */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none" 
+          style={{ backgroundImage: 'linear-gradient(var(--border-primary) 1px, transparent 1px), linear-gradient(90deg, var(--border-primary) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+
+        <div className="relative z-10 animate-fade-in">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--accent-surface)] border border-[var(--border-primary)] mb-8">
+            <Shield size={14} className="text-[var(--border-primary)]" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--border-primary)]">Security_Cleared: PERSONNEL_01</span>
+          </div>
+
+          <h1 className="text-4xl sm:text-6xl font-bold tracking-tighter leading-none mb-6 text-white uppercase">
+            Initialize_VoiceAI <span className="text-[var(--border-primary)]">v2.0</span>
+          </h1>
+
+          <p className="text-[13px] sm:text-sm max-w-xl mx-auto leading-relaxed text-[var(--text-secondary)] uppercase tracking-[0.1em]">
+            Practice high-fidelity acoustic interactions with an adaptive AI core trained for technical and behavioral evaluation.
+          </p>
         </div>
-
-        <h1
-          className="text-[2rem] sm:text-[2.75rem] md:text-[3.25rem] font-extrabold tracking-tight leading-[1.1] mb-4 animate-fade-in-up delay-1"
-          style={{ color: 'var(--text-primary)' }}
-        >
-          Ace your next{' '}
-          <span className="text-gradient">interview</span>
-        </h1>
-
-        <p
-          className="text-[15px] sm:text-base max-w-lg mx-auto animate-fade-in-up delay-2 leading-relaxed"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          Practice with an AI interviewer that adapts to your role, difficulty, and job description.
-        </p>
       </div>
 
       {/* Config Section */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 animate-fade-in-up delay-3">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-12">
+        <div className="flex items-center gap-3 text-[var(--border-primary)] mb-8">
+           <Settings size={18} />
+           <h2 className="text-[11px] font-bold uppercase tracking-[0.3em]">Module_Configuration</h2>
+           <div className="flex-grow h-[1px] bg-[var(--border-subtle)]" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           {/* Difficulty */}
-          <div className="surface-elevated rounded-2xl p-5">
-            <label className="text-[13px] font-semibold mb-3 block tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              DIFFICULTY
+          <div className="border border-[var(--border-subtle)] bg-black p-6 relative">
+            <label className="text-[10px] font-bold mb-4 block tracking-[0.2em] text-[var(--text-muted)] uppercase">
+              [ SET_DIFFICULTY_LEVEL ]
             </label>
-            <div className="flex rounded-xl p-1 gap-1" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div className="flex border border-[var(--border-subtle)] p-1 gap-1 bg-[var(--bg-secondary)]">
               {difficulties.map((diff) => (
                 <button
                   key={diff}
                   onClick={() => setDifficulty(diff)}
-                  className="flex-1 py-2 text-[13px] font-semibold rounded-lg transition-all cursor-pointer min-h-[40px]"
-                  style={
+                  className={`flex-1 py-2 text-[11px] font-bold transition-all cursor-pointer uppercase tracking-widest ${
                     difficulty === diff
-                      ? { backgroundColor: 'var(--accent-primary)', color: '#fff', boxShadow: '0 2px 8px var(--accent-glow)' }
-                      : { color: 'var(--text-muted)', backgroundColor: 'transparent' }
-                  }
+                      ? 'bg-[var(--border-primary)] text-black'
+                      : 'text-[var(--text-muted)] hover:text-white'
+                  }`}
                   aria-pressed={difficulty === diff}
                 >
                   {diff}
                 </button>
               ))}
             </div>
+            {/* Corner accent */}
+            <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[var(--border-primary)]" />
           </div>
 
           {/* Voice */}
-          <div className="surface-elevated rounded-2xl p-5">
-            <label className="text-[13px] font-semibold mb-3 block tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              INTERVIEWER VOICE
+          <div className="border border-[var(--border-subtle)] bg-black p-6 relative">
+            <label className="text-[10px] font-bold mb-4 block tracking-[0.2em] text-[var(--text-muted)] uppercase">
+              [ SELECT_ACOUSTIC_PROFILE ]
             </label>
             <div className="grid grid-cols-2 gap-2">
               {voices.map((voice) => (
                 <button
                   key={voice.id}
                   onClick={() => setSelectedVoice(voice.id)}
-                  className="text-left rounded-xl px-3 py-2.5 transition-all cursor-pointer min-h-[44px]"
-                  style={
+                  className={`text-left p-3 border transition-all cursor-pointer ${
                     selectedVoice === voice.id
-                      ? { backgroundColor: 'var(--accent-surface)', border: '1.5px solid var(--accent-primary)' }
-                      : { backgroundColor: 'var(--bg-secondary)', border: '1.5px solid transparent' }
-                  }
+                      ? 'border-[var(--border-primary)] bg-[var(--accent-surface)]'
+                      : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-[var(--text-muted)]'
+                  }`}
                   aria-pressed={selectedVoice === voice.id}
                 >
-                  <div className="font-semibold text-[13px]" style={{ color: selectedVoice === voice.id ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                  <div className={`font-bold text-[12px] uppercase ${selectedVoice === voice.id ? 'text-[var(--border-primary)]' : 'text-white'}`}>
                     {voice.name}
                   </div>
-                  <div className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  <div className="text-[9px] mt-1 text-[var(--text-muted)] uppercase">
                     {voice.description}
                   </div>
                 </button>
               ))}
             </div>
+            {/* Corner accent */}
+            <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[var(--border-primary)]" />
           </div>
         </div>
 
         {/* JD Input */}
-        <div className="mb-10 animate-fade-in-up delay-4">
+        <div className="mb-16 border-b border-[var(--border-subtle)] pb-16">
           <JDInput onJDChange={setJobDescription} />
         </div>
 
         {/* Role Selection */}
-        <div className="mb-16 sm:mb-24 animate-fade-in-up delay-5">
-          <div className="flex items-center gap-4 mb-5">
-            <h2 className="text-lg sm:text-xl font-bold tracking-tight whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
-              Choose a role
+        <div className="mb-24">
+          <div className="flex items-center gap-4 mb-8">
+            <Terminal size={18} className="text-[var(--border-primary)]" />
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.3em] text-white">
+              Execute_Role_Module
             </h2>
-            <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-primary)' }} />
+            <div className="h-[1px] flex-1 bg-[var(--border-subtle)]" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {roles.map(role => (
               <RoleCard key={role.id} {...role} onSelect={(id) => onSelectRole(id, difficulty, jobDescription)} />
             ))}
           </div>
         </div>
       </div>
+      
+      {/* Page Footer Readout */}
+      <footer className="p-8 border-t border-[var(--border-subtle)] flex justify-between text-[10px] text-[var(--text-muted)] uppercase tracking-[0.4em]">
+         <span>System_State: IDLE</span>
+         <span>Security_Protocol: ENABLED</span>
+         <span>Latency: 24ms</span>
+      </footer>
     </div>
   );
 };
