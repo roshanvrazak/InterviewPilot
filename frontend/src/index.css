@@ -21,8 +21,6 @@
   --success: #10B981;
   --danger: #EF4444;
   --warning: #F59E0B;
-  --glass-bg: transparent;
-  --glass-border: var(--border-primary);
 }
 
 /* ─── Base ─── */
@@ -61,7 +59,6 @@ h1, h2, h3, h4, h5, h6 {
 :focus-visible {
   outline: 2px solid var(--accent-primary);
   outline-offset: 2px;
-  border-radius: 4px;
 }
 
 button:focus-visible,
@@ -86,11 +83,12 @@ select:focus-visible {
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-primary); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border-primary); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 
 /* ─── Animations ─── */
 @keyframes fade-in-up {
@@ -135,27 +133,14 @@ select:focus-visible {
 .delay-5 { animation-delay: 0.3s; opacity: 0; }
 
 /* ─── Utility Classes ─── */
-.glass-panel {
-  background: #000;
-  border: 1px solid var(--border-primary);
-}
-
-.glass {
-  background: var(--nav-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-}
-
 .surface {
-  background-color: var(--card-bg);
-  border: 1px solid var(--card-border);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
 }
 
 .surface-elevated {
-  background-color: var(--bg-elevated);
-  border: 1px solid var(--card-border);
-  box-shadow: 0 1px 2px rgba(var(--shadow-color) / 0.04),
-              0 4px 16px rgba(var(--shadow-color) / 0.04);
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
 }
 
 .glow-accent {
@@ -221,7 +206,7 @@ textarea {
 }
 
 /* ─── Audio Element ─── */
-audio { border-radius: 8px; width: 100%; }
+audio { width: 100%; }
 audio::-webkit-media-controls-panel { background: var(--bg-secondary); }
 
 /* ─── Selection ─── */
@@ -235,7 +220,6 @@ audio::-webkit-media-controls-panel { background: var(--bg-secondary); }
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.02em;
