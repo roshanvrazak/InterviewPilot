@@ -3,51 +3,26 @@
 @tailwind utilities;
 
 /* ─── Design Tokens ─── */
-:root {
-  --bg-primary: #FFFFFF;
-  --bg-secondary: #F4F4F5;
-  --bg-surface: #FFFFFF;
-  --bg-surface-hover: #FAFAFA;
-  --bg-elevated: #FFFFFF;
-  --border-primary: #E4E4E7;
-  --border-subtle: #F4F4F5;
-  --text-primary: #09090B;
-  --text-secondary: #52525B;
-  --text-muted: #A1A1AA;
-  --accent-primary: #FF5701;
-  --accent-primary-hover: #E64D00;
-  --accent-secondary: #F97316;
-  --accent-glow: rgba(255, 87, 1, 0.12);
-  --accent-surface: rgba(255, 87, 1, 0.06);
-  --success: #10B981;
-  --success-surface: rgba(16, 185, 129, 0.08);
-  --danger: #EF4444;
-  --danger-surface: rgba(239, 68, 68, 0.06);
-  --warning: #F59E0B;
-  --warning-surface: rgba(245, 158, 11, 0.06);
-  --shadow-color: 0 0 0;
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.2);
-  --card-bg: #FFFFFF;
-  --card-border: #E4E4E7;
-  --nav-bg: rgba(255, 255, 255, 0.8);
-}
-
-.dark {
+:root, .dark {
   --bg-primary: #000000;
-  --bg-secondary: #050505;
-  --bg-surface: #0A0A0A;
-  --bg-surface-hover: #111111;
-  --bg-elevated: #161616;
-  --border-primary: #222222;
-  --border-subtle: #161616;
+  --bg-secondary: #080808;
+  --bg-surface: #000000;
+  --bg-surface-hover: #0A0A0A;
+  --bg-elevated: #000000;
+  --border-primary: #3B82F6; /* Signal Blue */
+  --border-subtle: rgba(59, 130, 246, 0.2);
   --text-primary: #FAFAFA;
   --text-secondary: #A1A1AA;
   --text-muted: #52525B;
-  /* Keep accents but refine shadows */
-  --accent-glow: rgba(255, 87, 1, 0.15);
-  --glass-bg: rgba(0, 0, 0, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --accent-primary: #3B82F6;
+  --accent-primary-hover: #2563EB;
+  --accent-glow: rgba(59, 130, 246, 0.2);
+  --accent-surface: rgba(59, 130, 246, 0.05);
+  --success: #10B981;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+  --glass-bg: transparent;
+  --glass-border: var(--border-primary);
 }
 
 /* ─── Base ─── */
@@ -55,12 +30,15 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   box-sizing: border-box;
+  border-radius: 0 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 body {
   margin: 0;
-  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg-primary);
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+  background-color: #000;
   color: var(--text-primary);
   min-height: 100dvh;
   line-height: 1.6;
@@ -73,7 +51,7 @@ body {
 
 /* ─── Typography ─── */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.15;
@@ -212,9 +190,8 @@ select:focus-visible {
 
 /* ─── Utility Classes ─── */
 .glass-panel {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
+  background: #000;
+  border: 1px solid var(--border-primary);
 }
 
 .glass {
@@ -264,23 +241,20 @@ select:focus-visible {
 
 /* ─── Button Styles ─── */
 .btn-primary {
-  background: var(--accent-primary);
-  color: white;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  color: var(--border-primary);
+  text-transform: uppercase;
+  font-weight: bold;
   padding: 0.75rem 1.75rem;
-  border-radius: 12px;
-  border: none;
   cursor: pointer;
   transition: all 0.15s ease;
   min-height: 44px;
   touch-action: manipulation;
-  letter-spacing: -0.01em;
 }
 .btn-primary:hover {
-  background: var(--accent-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px var(--accent-glow);
+  background: var(--border-primary);
+  color: #000;
 }
 .btn-primary:active {
   transform: translateY(0) scale(0.98);
@@ -289,10 +263,9 @@ select:focus-visible {
 .btn-secondary {
   background: var(--bg-surface);
   color: var(--text-primary);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
   font-weight: 600;
   padding: 0.75rem 1.75rem;
-  border-radius: 12px;
   border: 1px solid var(--border-primary);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -313,7 +286,7 @@ input[type="text"],
 input[type="password"],
 input[type="email"],
 textarea {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
   font-size: 16px;
   min-height: 44px;
 }
