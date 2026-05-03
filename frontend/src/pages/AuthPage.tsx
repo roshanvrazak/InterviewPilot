@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Shield, Lock, Terminal } from 'lucide-react';
 
 interface AuthPageProps {
   onLoginSuccess: () => void;
@@ -47,103 +48,104 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
           onLoginSuccess();
       } else {
           setIsLogin(true);
-          setError('Registration successful. Please login.');
+          setError('REGISTRATION_SUCCESSFUL. PLEASE_LOGIN.');
       }
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message.toUpperCase());
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-[calc(100dvh-3.5rem)] px-4">
-      <div className="surface-elevated w-full max-w-sm rounded-2xl p-6 sm:p-8 animate-fade-in-up">
-        <div className="text-center mb-6 animate-fade-in-up delay-1">
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            {isLogin ? 'Welcome back' : 'Create account'}
+    <div className="flex items-center justify-center min-h-[calc(100dvh-3.5rem)] px-4 font-mono bg-black relative">
+       {/* Subtle grid background */}
+       <div className="absolute inset-0 opacity-5 pointer-events-none" 
+          style={{ backgroundImage: 'linear-gradient(var(--border-primary) 1px, transparent 1px), linear-gradient(90deg, var(--border-primary) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+
+      <div className="border border-[var(--border-primary)] bg-black w-full max-w-md p-8 sm:p-12 relative animate-fade-in z-10">
+        {/* Decorative corner accents */}
+        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[var(--border-primary)]" />
+        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[var(--border-primary)]" />
+
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 border border-[var(--border-primary)] bg-[var(--bg-secondary)] mb-6">
+             {isLogin ? <Lock size={24} className="text-[var(--border-primary)]" /> : <Shield size={24} className="text-[var(--border-primary)]" />}
+          </div>
+          <h2 className="text-xl font-bold tracking-[0.2em] text-white uppercase mb-2">
+            {isLogin ? 'Secure_Gateway' : 'Personnel_Enrollment'}
           </h2>
-          <p className="mt-1.5 text-[13px]" style={{ color: 'var(--text-secondary)' }}>
-            {isLogin ? 'Sign in to continue' : 'Get started with AI interview prep'}
+          <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest">
+            {isLogin ? 'Authorization_Required' : 'Initialize_New_Credentials'}
           </p>
         </div>
 
         {error && (
-          <div
-            className="mb-5 px-3.5 py-2.5 rounded-xl text-[13px] font-medium animate-fade-in"
-            style={{
-              backgroundColor: error.includes('successful') ? 'var(--success-surface)' : 'var(--danger-surface)',
-              color: error.includes('successful') ? 'var(--success)' : 'var(--danger)',
-            }}
-            role="alert"
-          >
-            {error}
+          <div className="mb-8 border border-[var(--danger)] p-4 bg-black animate-fade-in">
+             <p className="text-[10px] font-bold text-[var(--danger)] uppercase tracking-widest">! ALERT: {error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="animate-fade-in-up delay-2">
-            <label htmlFor="auth-username" className="block text-[12px] font-semibold mb-1.5 tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              EMAIL
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="auth-username" className="block text-[10px] font-bold mb-2 tracking-[0.2em] text-[var(--text-muted)] uppercase">
+              [ IDENTIFIER / EMAIL ]
             </label>
             <input
               id="auth-username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="you@example.com"
+              placeholder="USER@MAINFRAME.LOCAL"
               autoComplete="username"
-              className="w-full px-3.5 py-2.5 rounded-xl outline-none transition-all text-[14px]"
-              style={{ backgroundColor: 'var(--bg-secondary)', border: '1.5px solid var(--border-primary)', color: 'var(--text-primary)' }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--accent-glow)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.boxShadow = 'none'; }}
+              className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] p-3 text-sm text-white focus:border-[var(--border-primary)] focus:bg-black outline-none transition-all placeholder:opacity-20"
               required
             />
           </div>
 
-          <div className="animate-fade-in-up delay-3">
-            <label htmlFor="auth-password" className="block text-[12px] font-semibold mb-1.5 tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              PASSWORD
+          <div>
+            <label htmlFor="auth-password" className="block text-[10px] font-bold mb-2 tracking-[0.2em] text-[var(--text-muted)] uppercase">
+              [ ACCESS_CODE ]
             </label>
             <input
               id="auth-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="********"
               autoComplete={isLogin ? 'current-password' : 'new-password'}
-              className="w-full px-3.5 py-2.5 rounded-xl outline-none transition-all text-[14px]"
-              style={{ backgroundColor: 'var(--bg-secondary)', border: '1.5px solid var(--border-primary)', color: 'var(--text-primary)' }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--accent-glow)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-primary)'; e.currentTarget.style.boxShadow = 'none'; }}
+              className="w-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] p-3 text-sm text-white focus:border-[var(--border-primary)] focus:bg-black outline-none transition-all placeholder:opacity-20"
               required
             />
           </div>
 
-          <div className="animate-fade-in-up delay-4 pt-1">
+          <div className="pt-4">
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full py-3 text-[14px] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-primary w-full py-4 text-sm font-bold tracking-[0.3em] flex items-center justify-center gap-3 disabled:opacity-30 cursor-pointer"
             >
-              {loading && (
-                <div className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white' }} aria-hidden="true" />
+              {loading ? (
+                <span>[ AUTHENTICATING... ]</span>
+              ) : (
+                <>
+                  <Terminal size={16} />
+                  <span>{isLogin ? '[ EXECUTE: SIGN_IN ]' : '[ EXECUTE: REGISTER ]'}</span>
+                </>
               )}
-              {isLogin ? 'Sign in' : 'Create account'}
             </button>
           </div>
 
-          <div className="text-center animate-fade-in-up delay-5">
+          <div className="text-center pt-2">
             <button
               type="button"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-[13px] font-medium transition-colors cursor-pointer min-h-[44px] inline-flex items-center"
-              style={{ color: 'var(--text-muted)' }}
+              className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--border-primary)] transition-colors cursor-pointer"
             >
               {isLogin ? (
-                <>No account? <span className="ml-1 font-semibold" style={{ color: 'var(--accent-primary)' }}>Sign up</span></>
+                <span>>> REGISTER_NEW_ACCOUNT</span>
               ) : (
-                <>Have an account? <span className="ml-1 font-semibold" style={{ color: 'var(--accent-primary)' }}>Sign in</span></>
+                <span>>> RETURN_TO_LOGIN_GATEWAY</span>
               )}
             </button>
           </div>

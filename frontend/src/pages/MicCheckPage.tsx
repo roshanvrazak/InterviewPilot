@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Mic, MicOff, Terminal, Activity, RotateCcw } from 'lucide-react';
 
 interface MicCheckPageProps {
   roleId: string;
@@ -46,7 +47,7 @@ export const MicCheckPage: React.FC<MicCheckPageProps> = ({
         updateVolume();
       } catch (err) {
         console.error('Error accessing microphone:', err);
-        setError('Could not access microphone. Please ensure you have granted permission.');
+        setError('CRITICAL: COULD_NOT_ACCESS_ACOUSTIC_HARDWARE. PERMISSION_DENIED.');
       }
     }
 
@@ -62,76 +63,82 @@ export const MicCheckPage: React.FC<MicCheckPageProps> = ({
   const isActive = volume > 5;
   const normalizedVolume = Math.min(1, volume / 128);
 
+  const renderMeter = () => {
+     const segments = 15;
+     const filled = Math.round(normalizedVolume * segments);
+     return (
+        <div className="flex gap-1 h-8 w-full max-w-[200px]">
+           {Array.from({ length: segments }).map((_, i) => (
+              <div 
+                key={i} 
+                className={`flex-1 ${i < filled ? (i > segments * 0.8 ? 'bg-[var(--danger)]' : 'bg-[var(--border-primary)]') : 'bg-[var(--border-subtle)] opacity-10'}`} 
+              />
+           ))}
+        </div>
+     );
+  };
+
   return (
-    <div className="max-w-md mx-auto mt-12 sm:mt-20 px-4 animate-fade-in-up">
-      <div className="surface-elevated rounded-2xl p-6 sm:p-8">
-        <div className="text-center mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            Mic check
-          </h1>
-          <p className="mt-1.5 text-[13px]" style={{ color: 'var(--text-secondary)' }}>
-            Make sure your microphone is working
-          </p>
+    <div className="flex flex-col items-center justify-center min-h-[calc(100dvh-3.5rem)] px-4 font-mono bg-black">
+      <div className="border border-[var(--border-primary)] bg-black w-full max-w-lg p-8 sm:p-12 relative animate-fade-in">
+        {/* Header */}
+        <div className="flex items-center gap-3 text-[var(--border-primary)] mb-10 border-b border-[var(--border-subtle)] pb-4">
+           <Activity size={18} />
+           <h1 className="text-xs font-bold uppercase tracking-[0.3em]">Module: Acoustic_Calibration</h1>
         </div>
 
-        {/* Info */}
-        <div className="flex flex-wrap gap-2 justify-center mb-6 animate-fade-in-up delay-1">
-          {[
-            { label: 'Role', value: roleId || 'General' },
-            { label: 'Voice', value: selectedVoice },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px]" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-              <span style={{ color: 'var(--text-muted)' }}>{label}</span>
-              <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{value}</span>
-            </div>
-          ))}
+        {/* System Specs */}
+        <div className="grid grid-cols-2 gap-4 mb-10 text-[10px] text-[var(--text-muted)] uppercase tracking-widest">
+           <div className="p-3 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+              <span className="block mb-1 opacity-50">TARGET_ROLE:</span>
+              <span className="text-white font-bold">{roleId.toUpperCase() || 'GENERAL'}</span>
+           </div>
+           <div className="p-3 border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
+              <span className="block mb-1 opacity-50">VOICE_CORE:</span>
+              <span className="text-white font-bold">{selectedVoice.toUpperCase()}</span>
+           </div>
         </div>
 
-        {/* Mic Indicator */}
-        <div className="flex flex-col items-center py-6 animate-fade-in-up delay-2">
-          <div
-            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center transition-all duration-150"
-            style={{
-              backgroundColor: isActive ? 'var(--success-surface)' : 'var(--bg-secondary)',
-              boxShadow: isActive ? `0 0 ${20 + normalizedVolume * 30}px ${8 + normalizedVolume * 16}px var(--success-surface)` : 'none',
-              border: `2px solid ${isActive ? 'var(--success)' : 'var(--border-primary)'}`,
-            }}
-            aria-label={isActive ? 'Microphone is active' : 'Microphone is inactive'}
-          >
-            <svg
-              className="w-6 h-6 sm:w-7 sm:h-7 transition-colors duration-150"
-              style={{ color: isActive ? 'var(--success)' : 'var(--text-muted)' }}
-              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
-            </svg>
+        {/* Calibration Display */}
+        <div className="flex flex-col items-center py-10 border border-[var(--border-subtle)] bg-black mb-10 relative">
+          <div className="absolute top-2 right-3 text-[8px] font-bold text-[var(--border-primary)] opacity-40">CAL_REF: 01-A</div>
+          
+          <div className={`mb-6 p-4 border-2 ${isActive ? 'border-[var(--success)]' : 'border-[var(--border-primary)] opacity-20'} transition-colors`}>
+             {isActive ? <Mic size={32} className="text-[var(--success)]" /> : <MicOff size={32} className="text-[var(--border-primary)]" />}
           </div>
 
-          <p className="mt-4 text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>
-            {isActive ? 'Microphone detected' : 'Speak to test your mic'}
+          <span className="text-[10px] font-bold mb-4 uppercase tracking-[0.2em] text-[var(--text-muted)]">Acoustic_Input_Level</span>
+          {renderMeter()}
+
+          <p className={`mt-6 text-[11px] font-bold uppercase tracking-widest ${isActive ? 'text-[var(--success)] animate-pulse' : 'text-[var(--text-muted)]'}`}>
+            {isActive ? '>> SIGNAL_DETECTED: OPTIMAL' : '>> WAITING_FOR_INPUT...'}
           </p>
 
           {error && (
-            <div className="mt-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium" style={{ backgroundColor: 'var(--danger-surface)', color: 'var(--danger)' }} role="alert">
-              {error}
+            <div className="mt-8 border border-[var(--danger)] p-4 w-full">
+              <p className="text-[10px] font-bold text-[var(--danger)] uppercase tracking-widest">! {error}</p>
             </div>
           )}
         </div>
 
-        {/* Buttons */}
-        <div className="flex gap-3 mt-2 animate-fade-in-up delay-3">
-          <button onClick={onBack} className="btn-secondary flex-1 py-2.5 text-[14px] cursor-pointer">
-            Back
+        {/* Commands */}
+        <div className="grid grid-cols-2 gap-4">
+          <button onClick={onBack} className="flex items-center justify-center gap-2 py-3 border border-[var(--border-primary)] text-[var(--border-primary)] text-[10px] font-bold uppercase tracking-widest hover:bg-[var(--border-primary)] hover:text-black transition-all cursor-pointer">
+            <RotateCcw size={14} />
+            <span>[ RETURN ]</span>
           </button>
           <button
             disabled={!stream || !!error}
             onClick={onStartInterview}
-            className={`btn-primary flex-1 py-2.5 text-[14px] cursor-pointer ${!stream || !!error ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex items-center justify-center gap-2 py-3 bg-[var(--border-primary)] text-black text-[10px] font-bold uppercase tracking-widest hover:bg-white disabled:opacity-20 transition-all cursor-pointer`}
           >
-            Start Interview
+            <Terminal size={14} />
+            <span>[ INITIALIZE ]</span>
           </button>
         </div>
       </div>
+      
+      <div className="mt-8 text-[9px] text-[var(--text-muted)] uppercase tracking-[0.4em]">Hardware_Calibration_Sequence_01_Rev_B</div>
     </div>
   );
 };
