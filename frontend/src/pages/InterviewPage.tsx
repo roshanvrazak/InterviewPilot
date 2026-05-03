@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import { MessageSquare, Layout } from 'lucide-react';
+import { Terminal, Cpu, Activity } from 'lucide-react';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useAudioCapture } from '../hooks/useAudioCapture';
 import { useAudioPlayback } from '../hooks/useAudioPlayback';
@@ -66,7 +66,7 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
           setSegments(s => [...s, { start, end: now }]);
         }
         currentSegmentRef.current = { start: now };
-        return [...prev, msg];
+        return [...prev, { ...msg, timestamp: Date.now() }];
       });
     } else if (msg.type === 'history') {
       setTranscripts(msg.history);
@@ -142,16 +142,11 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
     return () => { stopCapture(); stopPlayback(); disconnect(); };
   }, [stopCapture, stopPlayback, disconnect]);
 
-  // Determine the global state for the single Aura visualizer
   const getGlobalState = (): VisualizerState => {
     if (status === 'connecting' || status === 'idle') return 'Connecting';
     if (status === 'ending') return 'Thinking';
-    
-    // If AI is playing back, it's 'Speaking'
-    const isAISpeaking = playbackAnalyser && status === 'active'; // In real app, check if audio is actually playing
+    const isAISpeaking = playbackAnalyser && status === 'active'; 
     if (isAISpeaking) return 'Speaking';
-    
-    // Default to 'Listening' when active
     return isMuted ? 'Idle' : 'Listening';
   };
 
@@ -163,27 +158,29 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
 
   if (status === 'idle') {
     return (
-      <div className="relative min-h-[calc(100dvh-56px)] flex flex-col items-center justify-center p-6 overflow-hidden">
-        <div className="nebula-bg" />
-        <div className="nebula-blob nebula-blob-1" />
-        <div className="nebula-blob nebula-blob-2" />
+      <div className="relative min-h-[calc(100dvh-56px)] flex flex-col items-center justify-center p-6 bg-black font-mono">
+        {/* Grid Background */}
+        <div className="absolute inset-0 opacity-10 pointer-events-none" 
+          style={{ backgroundImage: 'linear-gradient(var(--border-primary) 1px, transparent 1px), linear-gradient(90deg, var(--border-primary) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
         
-        <div className="relative z-10 text-center max-w-2xl animate-fade-in">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--accent-surface)] border border-[var(--accent-glow)] mb-6 animate-fade-in-up delay-1">
-            <Layout size={14} className="text-[var(--accent-primary)]" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--accent-primary)]">Spatial Stage</span>
+        <div className="relative z-10 text-center max-w-2xl animate-fade-in border border-[var(--border-primary)] p-12 bg-black">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--accent-surface)] border border-[var(--border-primary)] mb-8">
+            <Terminal size={14} className="text-[var(--accent-primary)]" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent-primary)]">Industrial Mainframe v1.0</span>
           </div>
-          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight mb-6 animate-fade-in-up delay-2">
-            Ready to <span className="text-gradient">Begin?</span>
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tighter mb-6 text-white uppercase">
+            Initialize_Session?
           </h1>
-          <p className="text-[var(--text-secondary)] text-lg mb-10 animate-fade-in-up delay-3 max-w-md mx-auto">
-            Step into an immersive, voice-first interview experience. Position yourself comfortably and ensure your microphone is clear.
+          <p className="text-[var(--text-secondary)] text-sm mb-12 max-w-md mx-auto leading-relaxed border-l-2 border-[var(--border-primary)] pl-6 text-left">
+            > Establishing high-precision voice-link.<br/>
+            > Calibrating acoustic sensors.<br/>
+            > Ready for input.
           </p>
           <button 
             onClick={handleStart} 
-            className="btn-primary flex items-center gap-3 px-10 py-4 text-base shadow-xl shadow-orange-500/20 animate-fade-in-up delay-4 cursor-pointer"
+            className="btn-primary flex items-center gap-3 px-12 py-4 text-sm font-bold tracking-[0.2em] cursor-pointer w-full justify-center"
           >
-            Enter Studio
+            [ EXECUTE: START_INTERVIEW ]
           </button>
         </div>
       </div>
@@ -191,57 +188,68 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
   }
 
   return (
-    <div className="relative min-h-[calc(100dvh-56px)] bg-black overflow-hidden flex flex-col">
-      {/* Immersive Background */}
-      <div className="nebula-bg" />
-      <div className="nebula-blob nebula-blob-1" />
-      <div className="nebula-blob nebula-blob-2" />
-      <div className="nebula-blob nebula-blob-3" />
+    <div className="relative min-h-[calc(100dvh-56px)] bg-black flex flex-col font-mono overflow-hidden">
+      {/* Grid Background */}
+      <div className="absolute inset-0 opacity-5 pointer-events-none" 
+        style={{ backgroundImage: 'linear-gradient(var(--border-primary) 1px, transparent 1px), linear-gradient(90deg, var(--border-primary) 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
 
-      {/* Header */}
-      <header className="relative z-20 flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
-            <div className={`w-1.5 h-1.5 rounded-full ${status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-500'}`} />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-              {status === 'connecting' ? 'Establishing Connection' : 'Live Session'}
-            </span>
+      {/* System Status Bar (Header) */}
+      <header className="relative z-20 flex items-center justify-between px-6 py-3 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <Cpu size={16} className="text-[var(--border-primary)]" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-muted)]">SYSTEM_ID: {roleId.toUpperCase()}</span>
+          </div>
+          <div className="hidden md:flex items-center gap-2">
+            <Activity size={16} className="text-[var(--border-primary)]" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--text-muted)]">DIFF_LVL: {difficulty.toUpperCase()}</span>
           </div>
         </div>
 
-        <button 
-          onClick={() => setIsDrawerOpen(true)}
-          className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 transition-all cursor-pointer backdrop-blur-md"
-          aria-label="Open transcript"
-        >
-          <MessageSquare size={20} />
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-3 py-1 border border-[var(--border-primary)] bg-black/50">
+            <div className={`w-1.5 h-1.5 ${status === 'active' ? 'bg-[var(--success)] animate-pulse' : 'bg-zinc-600'}`} />
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--border-primary)]">
+              {status.toUpperCase()}
+            </span>
+          </div>
+          <button 
+            onClick={() => setIsDrawerOpen(true)}
+            className="flex items-center gap-2 px-3 py-1 border border-[var(--border-primary)] text-[var(--border-primary)] hover:bg-[var(--border-primary)] hover:text-black transition-all cursor-pointer"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Open_Log</span>
+          </button>
+        </div>
       </header>
 
-      {/* Center Stage: The Aura */}
+      {/* Main Console Stage */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-4">
-        <div className="relative">
-          {/* Subtle ring around the visualizer */}
-          <div 
-            className="absolute inset-0 rounded-full border border-white/5 animate-nebula" 
-            style={{ width: visualizerSize + 80, height: visualizerSize + 80, left: -40, top: -40 }} 
-          />
-          <AudioVisualizer 
-            analyser={getActiveAnalyser()} 
-            state={getGlobalState()} 
-            size={visualizerSize}
-            theme={theme}
-          />
+        <div className="relative p-8">
+            <AudioVisualizer 
+                analyser={getActiveAnalyser()} 
+                state={getGlobalState()} 
+                size={visualizerSize}
+                theme={theme}
+            />
+            
+            {/* Scanline Overlay effect */}
+            <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.02),rgba(0,255,0,0.01),rgba(0,0,255,0.02))] bg-[length:100%_2px,3px_100%]" />
         </div>
         
-        {/* Role Hint */}
-        <div className="mt-12 text-center animate-fade-in delay-5">
-          <h2 className="text-zinc-500 text-[11px] font-bold uppercase tracking-[0.2em] mb-1">Current Interview</h2>
-          <p className="text-white text-lg font-medium">{roleId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+        {/* Active Metadata Readout */}
+        <div className="mt-8 grid grid-cols-2 gap-x-12 gap-y-2 border-t border-[var(--border-subtle)] pt-6 opacity-60">
+           <div className="flex flex-col">
+              <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Active_Interviewer</span>
+              <span className="text-[12px] text-white font-bold">{selectedVoice.toUpperCase()}</span>
+           </div>
+           <div className="flex flex-col">
+              <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Acoustic_Feed</span>
+              <span className="text-[12px] text-white font-bold">{status === 'active' ? 'STREAMING' : 'READY'}</span>
+           </div>
         </div>
       </main>
 
-      {/* Floating Control Dock */}
+      {/* Industrial Command Bar */}
       <ControlDock 
         isMuted={isMuted}
         onToggleMute={toggleMute}
@@ -250,7 +258,7 @@ export const InterviewPage: React.FC<InterviewPageProps> = ({ roleId, difficulty
         status={status}
       />
 
-      {/* Transcript Drawer */}
+      {/* Log Feed */}
       <TranscriptDrawer 
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
