@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mic, MicOff, Check, X } from 'lucide-react';
+import { Mic, MicOff, Check, X, Terminal } from 'lucide-react';
 
 interface ControlDockProps {
   isMuted: boolean;
@@ -14,51 +14,64 @@ export const ControlDock: React.FC<ControlDockProps> = ({
   onToggleMute,
   onFinish,
   onEnd,
-  status
+  status = 'READY'
 }) => {
   return (
-    <div className="fixed bottom-6 md:bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 md:gap-3 px-4 md:px-6 py-3 md:py-4 glass-panel rounded-full shadow-2xl z-50 animate-fade-in-up">
-      {/* Status indicator if provided */}
-      {status && (
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-black/5 dark:bg-white/5 rounded-full border border-black/5 dark:border-white/10 mr-1">
-          <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-          <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-widest">{status}</span>
+    <div className="fixed bottom-0 left-0 w-full bg-black border-t border-[var(--border-primary)] z-50 flex items-center justify-between px-6 py-4 font-mono">
+      {/* Left: Session Info */}
+      <div className="flex items-center gap-4 text-[var(--border-primary)] opacity-80">
+        <Terminal size={16} />
+        <div className="flex flex-col">
+          <span className="text-[10px] font-bold uppercase tracking-widest">Session Status</span>
+          <span className="text-[12px] font-bold">[{status.toUpperCase()}]</span>
         </div>
-      )}
+      </div>
 
-      {/* Mic Toggle */}
-      <button
-        onClick={onToggleMute}
-        className={`p-2.5 md:p-3 rounded-full transition-all duration-200 ${
-          isMuted 
-            ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' 
-            : 'bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-white hover:bg-black/10 dark:hover:bg-white/20'
-        }`}
-        title={isMuted ? "Unmute" : "Mute"}
-        aria-label={isMuted ? "Unmute microphone" : "Mute microphone"}
-      >
-        {isMuted ? <MicOff size={18} className="md:w-5 md:h-5" /> : <Mic size={18} className="md:w-5 md:h-5" />}
-      </button>
+      {/* Center: Main Actions */}
+      <div className="flex items-center gap-6">
+        {/* Mic Toggle */}
+        <button
+          onClick={onToggleMute}
+          className={`flex items-center gap-3 px-4 py-2 transition-all duration-200 border ${
+            isMuted 
+              ? 'border-[var(--danger)] text-[var(--danger)] hover:bg-[var(--danger)] hover:text-black' 
+              : 'border-[var(--border-primary)] text-[var(--border-primary)] hover:bg-[var(--border-primary)] hover:text-black'
+          }`}
+          aria-label={isMuted ? "Unmute microphone" : "Mute microphone"}
+        >
+          {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+          <span className="text-[11px] font-bold uppercase tracking-tighter">
+            {isMuted ? '[ MIC: MUTED ]' : '[ MIC: ACTIVE ]'}
+          </span>
+        </button>
 
-      {/* Finish Answer - Primary Action */}
-      <button
-        onClick={onFinish}
-        className="p-3 md:p-4 rounded-full bg-orange-500 text-white hover:bg-orange-600 transition-all duration-200 shadow-lg shadow-orange-500/25 flex items-center justify-center group"
-        title="Finish Answer"
-        aria-label="Finish current answer"
-      >
-        <Check size={20} strokeWidth={3} className="md:w-6 md:h-6 group-active:scale-90 transition-transform" />
-      </button>
+        {/* Finish Answer */}
+        <button
+          onClick={onFinish}
+          className="flex items-center gap-3 px-6 py-2 bg-[var(--border-primary)] text-black hover:bg-white transition-all duration-200"
+          aria-label="Finish current answer"
+        >
+          <Check size={18} strokeWidth={3} />
+          <span className="text-[11px] font-bold uppercase tracking-tighter">
+            COMMIT_ANSWER
+          </span>
+        </button>
+      </div>
 
-      {/* End Interview */}
+      {/* Right: Danger Action */}
       <button
         onClick={onEnd}
-        className="p-2.5 md:p-3 rounded-full bg-black/5 dark:bg-white/10 text-zinc-700 dark:text-white hover:bg-red-500 hover:text-white transition-all duration-200"
-        title="End Interview"
+        className="flex items-center gap-2 px-4 py-2 text-[var(--text-muted)] hover:text-[var(--danger)] hover:border-[var(--danger)] border border-transparent transition-all duration-200"
         aria-label="End interview"
       >
-        <X size={18} className="md:w-5 md:h-5" />
+        <X size={16} />
+        <span className="text-[11px] font-bold uppercase tracking-tighter">
+          [ ABORT_SESSION ]
+        </span>
       </button>
+
+      {/* Decorative Scanline effect for the bar */}
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-white opacity-10 pointer-events-none" />
     </div>
   );
 };
