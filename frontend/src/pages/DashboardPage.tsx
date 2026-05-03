@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Terminal, Database, Clock, Activity } from 'lucide-react';
 
 interface Analytics {
   total_interviews: number;
@@ -51,12 +52,6 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
     return 'var(--danger)';
   };
 
-  const getScoreBg = (score: number) => {
-    if (score >= 80) return 'var(--success-surface)';
-    if (score >= 60) return 'var(--warning-surface)';
-    return 'var(--danger-surface)';
-  };
-
   const getLetterGrade = (score: number) => {
     if (score >= 80) return 'A';
     if (score >= 60) return 'B';
@@ -65,97 +60,127 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[60dvh] flex items-center justify-center px-4 animate-fade-in-up">
-        <div className="surface-elevated rounded-2xl p-8 text-center max-w-sm w-full">
-          <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--accent-surface)' }} aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold tracking-tight mb-2" style={{ color: 'var(--text-primary)' }}>Dashboard</h2>
-          <p className="mb-6 text-[13px]" style={{ color: 'var(--text-secondary)' }}>Sign in to view your interview history and analytics.</p>
-          <button onClick={onLoginPrompt} className="btn-primary px-6 py-2.5 text-[14px] cursor-pointer">Sign in</button>
+      <div className="min-h-[60dvh] flex items-center justify-center px-4 font-mono">
+        <div className="border border-[var(--border-primary)] bg-black p-12 text-center max-w-md w-full relative">
+          <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[var(--border-primary)]" />
+          <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[var(--border-primary)]" />
+          <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[var(--border-primary)]" />
+          <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[var(--border-primary)]" />
+          
+          <Terminal size={32} className="mx-auto mb-6 text-[var(--border-primary)]" />
+          <h2 className="text-xl font-bold tracking-tight mb-4 uppercase">Access_Denied</h2>
+          <p className="mb-8 text-xs text-[var(--text-secondary)] leading-relaxed uppercase tracking-widest">Authentication required to access encrypted session data.</p>
+          <button onClick={onLoginPrompt} className="btn-primary w-full py-3 cursor-pointer">
+            [ LOGIN_TO_SYSTEM ]
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 md:p-8 animate-fade-in-up">
-      <header className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Dashboard</h2>
-        <p className="mt-1 text-[13px]" style={{ color: 'var(--text-secondary)' }}>Track your performance and history.</p>
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 md:p-8 font-mono">
+      <header className="mb-12 flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[var(--border-subtle)] pb-6">
+        <div>
+           <div className="flex items-center gap-2 text-[var(--border-primary)] mb-1">
+              <Database size={18} />
+              <span className="text-[10px] font-bold uppercase tracking-[0.3em]">System Command Center</span>
+           </div>
+           <h2 className="text-3xl font-bold tracking-tighter text-white uppercase">Personnel_Dashboard</h2>
+        </div>
+        <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest text-right">
+           LAST_SYNC: {new Date().toLocaleTimeString()}
+        </div>
       </header>
 
       {error && (
-        <div className="rounded-xl p-3.5 mb-5" style={{ background: 'var(--danger-surface)', border: '1px solid var(--danger)' }} role="alert">
-          <p className="font-medium text-[13px]" style={{ color: 'var(--danger)' }}>{error}</p>
+        <div className="border border-[var(--danger)] bg-black p-4 mb-8">
+          <p className="text-xs font-bold text-[var(--danger)] uppercase tracking-widest">! CRITICAL_ERROR: {error}</p>
         </div>
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="w-10 h-10 rounded-full animate-spin mb-3" style={{ border: '3px solid var(--border-primary)', borderTopColor: 'var(--accent-primary)' }} role="status" aria-label="Loading" />
-          <p className="text-[13px] font-medium" style={{ color: 'var(--text-muted)' }}>Loading...</p>
+        <div className="flex flex-col items-center justify-center py-24">
+          <div className="w-12 h-12 border border-[var(--border-primary)] border-t-transparent animate-spin mb-6" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-[var(--border-primary)] animate-pulse">Syncing_Mainframe_Data...</p>
         </div>
       ) : (
         <>
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 sm:mb-8">
-            <div className="surface-elevated rounded-2xl p-5 animate-fade-in-up delay-1">
-              <span className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Interviews</span>
-              <p className="font-mono text-3xl sm:text-4xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>{analytics?.total_interviews || 0}</p>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            <div className="border border-[var(--border-subtle)] bg-black p-6 group hover:border-[var(--border-primary)] transition-colors relative overflow-hidden">
+              <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[var(--border-primary)] opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Interviews_Completed</span>
+              <p className="text-5xl font-bold mt-3 text-white">{analytics?.total_interviews || 0}</p>
             </div>
-            <div className="surface-elevated rounded-2xl p-5 animate-fade-in-up delay-2">
-              <span className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Avg Score</span>
-              <p className="font-mono text-3xl sm:text-4xl font-bold mt-1" style={{ color: 'var(--text-primary)' }}>
+            
+            <div className="border border-[var(--border-subtle)] bg-black p-6 group hover:border-[var(--border-primary)] transition-colors relative overflow-hidden">
+              <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[var(--border-primary)] opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Aggregated_Performance</span>
+              <p className="text-5xl font-bold mt-3 text-white">
                 {analytics?.average_score != null ? Number(analytics.average_score).toFixed(1) : '0.0'}
-                <span className="text-base font-medium ml-0.5" style={{ color: 'var(--text-muted)' }}>/100</span>
+                <span className="text-lg opacity-30 ml-2">/100</span>
               </p>
+            </div>
+
+            <div className="hidden lg:block border border-[var(--border-subtle)] bg-black p-6 group hover:border-[var(--border-primary)] transition-colors relative overflow-hidden">
+               <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[var(--border-primary)] opacity-0 group-hover:opacity-100 transition-opacity" />
+               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">System_Status</span>
+               <div className="mt-4 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-[var(--success)] animate-pulse" />
+                  <span className="text-xl font-bold text-[var(--success)]">OPTIMAL</span>
+               </div>
             </div>
           </div>
 
-          {/* History */}
-          <div className="animate-fade-in-up delay-3">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[15px] font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>History</h3>
-              <span className="badge" style={{ color: 'var(--accent-primary)', background: 'var(--accent-surface)' }}>
-                {history.length} session{history.length !== 1 ? 's' : ''}
+          {/* History / Process Log */}
+          <div>
+            <div className="flex items-center justify-between mb-6 border-b border-[var(--border-subtle)] pb-2">
+              <div className="flex items-center gap-2">
+                <Clock size={14} className="text-[var(--border-primary)]" />
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-primary)]">Process_Log_History</h3>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 border border-[var(--border-primary)] text-[var(--border-primary)]">
+                {history.length} RECORDS_FOUND
               </span>
             </div>
 
             {history.length === 0 ? (
-              <div className="rounded-2xl p-10 sm:p-14 text-center" style={{ border: '2px dashed var(--border-primary)' }}>
-                <p className="text-[15px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No interviews yet</p>
-                <p className="text-[13px] mb-5" style={{ color: 'var(--text-muted)' }}>Start your first mock interview to see your progress.</p>
-                <button onClick={onGoToHome} className="btn-primary text-[14px] px-5 py-2.5 cursor-pointer">Start Interview</button>
+              <div className="border border-[var(--border-subtle)] border-dashed py-24 text-center">
+                <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-[var(--text-muted)] mb-8">No Session Data Found In Local Cache</p>
+                <button onClick={onGoToHome} className="btn-primary px-10 py-3 cursor-pointer">
+                  [ EXECUTE: INITIAL_SESSION ]
+                </button>
               </div>
             ) : (
-              <div className="space-y-2">
-                {history.map((item) => (
+              <div className="space-y-0 border border-[var(--border-subtle)]">
+                {history.map((item, idx) => (
                   <div
                     key={item.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-xl transition-all duration-150"
-                    style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)' }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent-primary)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--card-border)'; }}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--border-primary)] group transition-all cursor-default"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h4 className="font-semibold text-[14px]" style={{ color: 'var(--text-primary)' }}>{item.role}</h4>
-                        <span className="badge" style={{ background: 'var(--accent-surface)', color: 'var(--accent-primary)' }}>{item.type}</span>
+                      <div className="flex items-center gap-4 mb-2">
+                        <span className="text-[10px] font-bold text-[var(--text-muted)] group-hover:text-black">0{idx + 1}</span>
+                        <h4 className="font-bold text-[14px] text-white group-hover:text-black uppercase tracking-tight">{item.role}</h4>
+                        <span className="text-[10px] font-bold px-2 py-0.5 border border-white/20 text-[var(--text-muted)] group-hover:text-black group-hover:border-black/20 uppercase tracking-widest">{item.type}</span>
                       </div>
-                      <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-                        {new Date(item.started_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                      <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)] group-hover:text-black/70">
+                        <Activity size={10} />
+                        <span>TIMESTAMP: {new Date(item.started_at).toLocaleString().toUpperCase()}</span>
+                      </div>
                     </div>
-                    <div className="mt-2 sm:mt-0 flex items-center gap-3">
-                      <span className="font-mono text-[15px] font-bold" style={{ color: getScoreColor(item.score) }}>
-                        {item.score}%
-                      </span>
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center font-mono font-bold text-[12px]"
-                        style={{ border: `2px solid ${getScoreColor(item.score)}`, color: getScoreColor(item.score), background: getScoreBg(item.score) }}
+                    
+                    <div className="mt-4 sm:mt-0 flex items-center gap-8">
+                       <div className="flex flex-col items-end">
+                          <span className="text-[9px] font-bold text-[var(--text-muted)] group-hover:text-black uppercase tracking-widest">Score_Index</span>
+                          <span className="text-xl font-bold font-mono" style={{ color: getScoreColor(item.score) }}>
+                            {item.score}%
+                          </span>
+                       </div>
+                       <div
+                        className="w-10 h-10 border flex items-center justify-center font-bold text-lg"
+                        style={{ borderColor: getScoreColor(item.score), color: getScoreColor(item.score) }}
                         aria-label={`Grade: ${getLetterGrade(item.score)}`}
                       >
                         {getLetterGrade(item.score)}
@@ -168,6 +193,12 @@ export const DashboardPage: React.FC<{ onLoginPrompt: () => void, onGoToHome: ()
           </div>
         </>
       )}
+      
+      {/* Footer System Info */}
+      <footer className="mt-20 pt-8 border-t border-[var(--border-subtle)] flex justify-between text-[9px] text-[var(--text-muted)] uppercase tracking-[0.4em]">
+         <span>System: Mainframe_Dashboard</span>
+         <span>Version: 1.0.4-LTS</span>
+      </footer>
     </div>
   );
 };
